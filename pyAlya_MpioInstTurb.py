@@ -38,42 +38,34 @@ mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE
 
 pyAlya.pprint(0,'Run (%d instants)...' % len(listOfInstants),flush=True)
 
-field = pyAlya.Field(xyz  = pyAlya.truncate(mesh.xyz,6),
-					OMEGA = mesh.newArray(ndim=3),  #Vorticity 
-					QCRIT = mesh.newArray(),  	#Q-criterion 
-					OCRIT = mesh.newArray(),        #Omega-criterion 
-					LMDA2 = mesh.newArray(),        #Lambda 2 
-					RORTX = mesh.newArray(),        #Rortex 
-					OMRTX = mesh.newArray(),        #Omega-Rortex
-					#SWIRL = mesh.newArray(),        #Swirl-Strength
-				   )
-
 time=0
 for instant in listOfInstants:
-  if instant%100 == 0: pyAlya.pprint(1,'First loop, instant %d...'%instant,flush=True)
+  pyAlya.pprint(1,'First loop, instant %d...'%instant,flush=True)
   # Read field
-  fields,header = pyAlya.Field.read(CASESTR,VARLIST,instant,mesh.xyz,basedir=BASEDIR,fmt=FILE_FMT)
+  field, header = pyAlya.Field.read(CASESTR,VARLIST,instant,mesh.xyz,basedir=BASEDIR,fmt=FILE_FMT)
   
-  # Compute time-weighted average 
-  dt   = header.time - time  # weight
-  time = header.time         # sum_weights
+  # Compute and smooth the gradient of velocity
+  gradv = mesh.smooth(mesh.gradient(field['VELOC']),iters=3)
   
-  # Compute gradient of velocity
-  #gradv = mesh.smooth(mesh.gradient(fields['VELOC']),iters=6)
-  gradv = mesh.gradient(fields['VELOC'])
+  # # Store gradients
+  # field['GRADV'] = mesh.newArray(ndim=6)
+  # field['GRADV'][:,0] = gradv[:,0] # XX
+  # field['GRADV'][:,1] = gradv[:,4] # YY
+  # field['GRADV'][:,2] = gradv[:,8] # ZZ
+  # field['GRADV'][:,3] = gradv[:,1] # XY
+  # field['GRADV'][:,4] = gradv[:,2] # XZ
+  # field['GRADV'][:,5] = gradv[:,5] # YZ
   
-  field['OMEGA'] = pyAlya.postproc.vorticity(gradv)
+  # Compute Vorticity, Q and Omega from the gradient
+  field['VORTI'] = pyAlya.postproc.vorticity(gradv)
   field['QCRIT'] = pyAlya.postproc.QCriterion(gradv)
-  field['OCRIT'] = pyAlya.postproc.OmegaCriterion(gradv,epsilon=0.001,modified=False)
-  field['LMDA2'] = pyAlya.postproc.Lambda2Criterion(gradv)
+  field['LAMB2'] = pyAlya.postproc.Lambda2Criterion(gradv)
+  field['OMEGA'] = pyAlya.postproc.OmegaCriterion(gradv,epsilon=0.001,modified=False)
   field['RORTX'] = pyAlya.postproc.RortexCriterion(gradv)
-  field['OMRTX'] = pyAlya.postproc.OmegaRortexCriterion(gradv,epsilon=0.001,modified=False)
-  #field['SWIRL'] = pyAlya.postproc.SwirlStrength(gradv,normalized=False)
-  
+  field['OMERX'] = pyAlya.postproc.OmegaRortexCriterion(gradv,epsilon=0.001,modified=False)
   
   #Write the fields
   pyAlya.pprint(1,'Writing MPIO...',flush=True)
-  field.write(CASESTR,instant,time,basedir=ALT_BASEDIR,fmt=FILE_FMT)
+  field.write(CASESTR,instant,header.time,basedir=BASEDIR,fmt=FILE_FMT,exclude_vars=['VELOC'])
 
 pyAlya.cr_info()
-
