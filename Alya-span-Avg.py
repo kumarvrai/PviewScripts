@@ -54,8 +54,14 @@ if('BUD' not in file_fmt):
     case.PointArrays = ['VELOC','PRESS']
    else:
     case.PointArrays = ['TURBU','VELOC','PRESS']
+else:
+   if(model == "BASIC_VARS"):
+    case.PointArrays = ['AVVEL', 'AVPRE', 'AVVE2', 'AVVXY']
+   elif(model == "EXTEND_VARS"):
+    case.PointArrays = ['AVVEL', 'AVPRE', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
 case.UpdatePipeline()
 caseVarNames = case.PointArrays
+print("--|| ALYA : LOADED VARIABLES", caseVarNames)
 print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 if('PVD' in file_fmt):
@@ -257,12 +263,15 @@ print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t)
 if('ensi' in fileName):
  d = dsa.WrapDataObject(inputs[0].GetBlock(0))
 elif('pvd' in fileName):
- d = dsa.WrapDataObject(inputs[0])
+ d = dsa.WrapDataObject(inputs[0].VTKObject)
 x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
 y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
 z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
 ## SLICE GEOMETRY
-out = dsa.WrapDataObject(inputs[1].GetBlock(0))
+if('ensi' in fileName):
+ out = dsa.WrapDataObject(inputs[1].GetBlock(0))
+elif('pvd' in fileName):
+ out = dsa.WrapDataObject(inputs[1].VTKObject)
 x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
 y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
 ind_2d = np.lexsort((y_2d,x_2d));

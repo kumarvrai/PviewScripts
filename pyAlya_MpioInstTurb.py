@@ -33,10 +33,7 @@ listOfInstants = [ii for ii in range(START,END+DT,DT)]
 
 
 ## Create the subdomain mesh
-if('mpio' in FILE_FMT):
- mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,read_commu=False,read_massm=False)
-elif('ensi' in FILE_FMT):
- mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=False,read_massm=False)
+mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=True if FILE_FMT == 'mpio' else False,read_massm=False)
 
 
 pyAlya.pprint(0,'Run (%d instants)...' % len(listOfInstants),flush=True)
@@ -45,32 +42,38 @@ field = pyAlya.Field(xyz  = pyAlya.truncate(mesh.xyz,6),
 					OMEGA = mesh.newArray(ndim=3),  #Vorticity 
 					QCRIT = mesh.newArray(),  	#Q-criterion 
 					OCRIT = mesh.newArray(),        #Omega-criterion 
+					LMDA2 = mesh.newArray(),        #Lambda 2 
+					RORTX = mesh.newArray(),        #Rortex 
+					OMRTX = mesh.newArray(),        #Omega-Rortex
 					#SWIRL = mesh.newArray(),        #Swirl-Strength
 				   )
 
 time=0
 for instant in listOfInstants:
-	if instant%100 == 0: pyAlya.pprint(1,'First loop, instant %d...'%instant,flush=True)
-	# Read field
-	fields,header = pyAlya.Field.read(CASESTR,VARLIST,instant,mesh.xyz,basedir=BASEDIR,fmt=FILE_FMT)
-	
-	# Compute time-weighted average 
-	dt   = header.time - time  # weight
-	time = header.time         # sum_weights
-
-	# Compute gradient of velocity
-	#gradv = mesh.smooth(mesh.gradient(fields['VELOC']),iters=6)
-	gradv = mesh.gradient(fields['VELOC'])
-
-	field['OMEGA'] = pyAlya.postproc.vorticity(gradv)
-	field['QCRIT'] = pyAlya.postproc.Qcriterion(gradv)
-	field['OCRIT'] = pyAlya.postproc.OmegaCriterion(gradv,epsilon=0.001,modified=False)
-	#field['SWIRL'] = pyAlya.postproc.SwirlStrength(gradv,normalized=False)
-
-
-	#Write the fields
-	pyAlya.pprint(1,'Writing MPIO...',flush=True)
-	field.write(CASESTR,instant,time,basedir=ALT_BASEDIR,fmt=FILE_FMT)
+  if instant%100 == 0: pyAlya.pprint(1,'First loop, instant %d...'%instant,flush=True)
+  # Read field
+  fields,header = pyAlya.Field.read(CASESTR,VARLIST,instant,mesh.xyz,basedir=BASEDIR,fmt=FILE_FMT)
+  
+  # Compute time-weighted average 
+  dt   = header.time - time  # weight
+  time = header.time         # sum_weights
+  
+  # Compute gradient of velocity
+  #gradv = mesh.smooth(mesh.gradient(fields['VELOC']),iters=6)
+  gradv = mesh.gradient(fields['VELOC'])
+  
+  field['OMEGA'] = pyAlya.postproc.vorticity(gradv)
+  field['QCRIT'] = pyAlya.postproc.QCriterion(gradv)
+  field['OCRIT'] = pyAlya.postproc.OmegaCriterion(gradv,epsilon=0.001,modified=False)
+  field['LMDA2'] = pyAlya.postproc.Lambda2Criterion(gradv)
+  field['RORTX'] = pyAlya.postproc.RortexCriterion(gradv)
+  field['OMRTX'] = pyAlya.postproc.OmegaRortexCriterion(gradv,epsilon=0.001,modified=False)
+  #field['SWIRL'] = pyAlya.postproc.SwirlStrength(gradv,normalized=False)
+  
+  
+  #Write the fields
+  pyAlya.pprint(1,'Writing MPIO...',flush=True)
+  field.write(CASESTR,instant,time,basedir=ALT_BASEDIR,fmt=FILE_FMT)
 
 pyAlya.cr_info()
 
