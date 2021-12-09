@@ -27,8 +27,10 @@ VARLIST        = ['VELOC','PRESS','AVPRE', 'AVVEL', 'AVVE2', 'AVVXY','AVTAN']
 #START, DT, END = 2,1,415
 START, DT, END = int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
 
-FILE_FMT = 'mpio'
-SAVE_MPIO      = True
+FILE_FMT = str(sys.argv[6])
+COMM = int(sys.argv[7])
+
+SAVE_MPIO = True
 COMPUTE_EARSM  = False
 
 # Partial runs
@@ -40,7 +42,6 @@ listOfInstants = [ii for ii in range(START,END+DT,DT)]
 
 
 ## Create the subdomain mesh
-#mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=True if FILE_FMT == 'mpio' else False,read_massm=False)
 mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=False,read_massm=False)
 
 pyAlya.pprint(0,'Run (%d instants)...' % len(listOfInstants),flush=True)
@@ -120,13 +121,13 @@ stats['RESTR'][:,6] = stats['RESTR'][:,2]
 stats['RESTR'][:,7] = stats['RESTR'][:,5]
 
 
-stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
-	'AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
-	'AVPF2','AVTF2','TAYMS','KOLLS','KOLTS','CONVE','PRODU','DIFF1','DIFF2',
-	'DIFF3','PSTRA','DISSI','AVPVE','AVVE3'
-])
-
-exit(0) # Stop the run so as not to overload the GPFS
+#stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+#	'AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
+#	'AVPF2','AVTF2','TAYMS','KOLLS','KOLTS','CONVE','PRODU','DIFF1','DIFF2',
+#	'DIFF3','PSTRA','DISSI','AVPVE','AVVE3'
+#])
+#
+#exit(0) # Stop the run so as not to overload the GPFS
 
 ## Do a second loop in time
 # This time compute all the necessary magnitudes and accumulate 
