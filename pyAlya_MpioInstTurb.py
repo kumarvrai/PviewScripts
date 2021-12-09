@@ -27,13 +27,17 @@ VARLIST        = ['VELOC','PRESS']
 START, DT, END = int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
 
 FILE_FMT = sys.argv[6]
+COMM = sys.argv[7]
 
-# In case of restart, load the previous data
-listOfInstants = [ii for ii in range(START,END+DT,DT)]
+#Create list of instances
+if(START==END):
+  listOfInstants = [END]
+else:
+  listOfInstants = [ii for ii in range(START,END+DT,DT)]
 
 
 ## Create the subdomain mesh
-mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=True if FILE_FMT == 'mpio' else False,read_massm=False)
+mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=True if COMM == 1 else False,read_massm=False)
 
 
 pyAlya.pprint(0,'Run (%d instants)...' % len(listOfInstants),flush=True)
