@@ -34,7 +34,7 @@ elif('VTK' in file_fmt):
 elif('BUDENSI' in file_fmt): 
  fileName = caseName+'.ensi.case'
 elif('BUDPVD' in file_fmt): 
- fileName = caseName+'.pvd'
+ fileName = './'+caseName+'.pvd'
 else:
  raise ValueError('--|| ALYA ERROR :: FILE_FMT NOT RECONIZED.')
 case = OpenDataFile(fileName)
@@ -55,9 +55,9 @@ if('BUD' not in file_fmt):
    else:
     case.PointArrays = ['TURBU','VELOC','PRESS']
 else:
-   if(model == "BASIC_VARS"):
+   if(model == "BASIC"):
     case.PointArrays = ['AVVEL', 'AVPRE', 'AVVE2', 'AVVXY']
-   elif(model == "EXTEND_VARS"):
+   elif(model == "EXTEND"):
     case.PointArrays = ['AVVEL', 'AVPRE', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
 case.UpdatePipeline()
 caseVarNames = case.PointArrays
@@ -65,6 +65,11 @@ print("--|| ALYA : LOADED VARIABLES", caseVarNames)
 print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 if('PVD' in file_fmt):
+  #print("--|| ALYA :: APPLYING D3 FILTER")
+  #startTime = time.time()
+  #case = D3(Input=case)
+  #case.UpdatePipeline()
+  #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
   startTime = time.time()
   case = CleantoGrid(Input=case)
@@ -212,6 +217,7 @@ if("PINTERP" in method):
     # create a new 'Transform'
     transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
     resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1,guiName="resample{}".format(i))
+    #resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1,guiName="resample{}".format(i))
     resample_transforms.append(resampleWithDataset1)
     # Properties modified on transform1.Transform
     transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
