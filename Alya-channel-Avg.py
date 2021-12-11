@@ -7,6 +7,11 @@ from paraview import vtk
 from paraview import numpy_support
 from paraview.simple import *
 
+#pxm  = servermanager.ProxyManager()
+#pxm.GetVersion()
+#print("--|| NEK :: USING PARAVIEW VERSION",pxm)
+
+
 caseName	= sys.argv[1]
 model		= sys.argv[2]
 nu		= float(sys.argv[3])
@@ -256,9 +261,9 @@ for i in range(N):
 	  transform1.Transform.Rotate = [0.0, 0.0, zpos[i]-thMid]
 	else:
 	  transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
-	resampleWithDataset1 = ResampleWithDataset(Input=CAL1,Source=transform1,guiName="resample{}".format(i))
+	#resampleWithDataset1 = ResampleWithDataset(Input=CAL1,Source=transform1)
+	resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=CAL1,DestinationMesh=transform1)
 	resample_transforms.append(resampleWithDataset1)
-	#data.append(dsa.WrapDataObject(servermanager.Fetch(resampleWithDataset1)).PointData['AVVEL'])
 print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
 HideAll()
 
@@ -350,9 +355,9 @@ if('1D' in dim):
   	  transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
   	else:  
   	  transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]  
-  	resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1,guiName="resample{}".format(i))
+  	#resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1)
+  	resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
   	resample_transforms.append(resampleWithDataset1)
-  	resampleWithDataset1.UpdatePipeline()
   	print(i,int(resampleWithDataset1.GetDataInformation().GetNumberOfPoints()))
   print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
   HideAll()
