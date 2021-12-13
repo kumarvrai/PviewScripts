@@ -358,7 +358,6 @@ if('1D' in dim):
   	#resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1)
   	resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
   	resample_transforms.append(resampleWithDataset1)
-  	print(i,int(resampleWithDataset1.GetDataInformation().GetNumberOfPoints()))
   print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
   HideAll()
   
