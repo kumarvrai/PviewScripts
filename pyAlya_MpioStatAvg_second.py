@@ -42,7 +42,7 @@ listOfInstants = [ii for ii in range(START,END+DT,DT)]
 
 
 ## Create the subdomain mesh
-mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=False,read_massm=False)
+mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=True if COMM == 1 else False,read_massm=False)
 
 pyAlya.pprint(0,'Run (%d instants)...' % len(listOfInstants),flush=True)
 

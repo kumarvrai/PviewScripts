@@ -25,7 +25,9 @@ CASESTR        = sys.argv[1]
 VARLIST        = ['VELOC','PRESS']
 START, DT, END = int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
 
-FILE_FMT = 'mpio'
+FILE_FMT = str(sys.argv[6])
+COMM = int(sys.argv[7])
+
 SAVE_MPIO      = True
 COMPUTE_EARSM  = False
 
@@ -38,14 +40,9 @@ listOfInstants = [ii for ii in range(START,END+DT,DT)]
 
 
 ## Create the subdomain mesh
-if('mpio' in FILE_FMT):
- mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,read_commu=False,read_massm=False)
-elif('ensi' in FILE_FMT):
- mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=False,read_massm=False)
+mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,read_commu=True if COMM == 1 else False,read_massm=False)
 
 ### Write the subdomain mesh in MPIO
-#mesh.write(CASESTR,basedir=ALT_BASEDIR,fmt='mpio')
-
 pyAlya.pprint(0,'Run (%d instants)...' % len(listOfInstants),flush=True)
 
 ## Accumulate the statistics (auxiliar according to Table 5)
@@ -62,8 +59,8 @@ stats = pyAlya.Field(xyz  = pyAlya.truncate(mesh.xyz,6),
 					AVROT = mesh.newArray(ndim=9),  # Averaged rotation rate
 					AVSHE = mesh.newArray(ndim=9),  # Averaged shear stresses
 					RESTR = mesh.newArray(ndim=9),  # Reynolds stresses
-					AVVE2 = mesh.newArray(ndim=3),  # Principal Reynolds stresses
-					AVVXY = mesh.newArray(ndim=3),  # Shear Reynolds stresses
+					RS_II = mesh.newArray(ndim=3),  # Principal Reynolds stresses
+					RS_IJ = mesh.newArray(ndim=3),  # Shear Reynolds stresses
 					AVSTF = mesh.newArray(ndim=9),  # Averaged strain rate
 					AVRTF = mesh.newArray(ndim=9),  # Averaged rotation rate
 					AVTHF = mesh.newArray(ndim=3),	# Averaged turbulent heat flux
@@ -183,12 +180,12 @@ stats['AVSTF'] = stats['AVSTF']/len(listOfInstants)
 stats['AVRTF'] = stats['AVRTF']/len(listOfInstants) 
 stats['PSTRA'] = stats['PSTRA']/len(listOfInstants) 
 stats['DISSI'] = stats['DISSI']/len(listOfInstants)
-stats['AVVE2'][:,0] = stats['RESTR'][:,0]
-stats['AVVE2'][:,1] = stats['RESTR'][:,4]
-stats['AVVE2'][:,2] = stats['RESTR'][:,8]
-stats['AVVXY'][:,0] = stats['RESTR'][:,1]
-stats['AVVXY'][:,1] = stats['RESTR'][:,5]
-stats['AVVXY'][:,2] = stats['RESTR'][:,2]
+stats['RS_II'][:,0] = stats['RESTR'][:,0]
+stats['RS_II'][:,1] = stats['RESTR'][:,4]
+stats['RS_II'][:,2] = stats['RESTR'][:,8]
+stats['RS_IJ'][:,0] = stats['RESTR'][:,1]
+stats['RS_IJ'][:,1] = stats['RESTR'][:,5]
+stats['RS_IJ'][:,2] = stats['RESTR'][:,2]
 # Compute TKE and dissipation
 k     = pyAlya.stats.TKE(stats['RESTR'])
 dissi = 0.5*pyAlya.math.trace(stats['DISSI']) # e = 1/2*e_ii = 2*mu*<S'_ij S'_ij>
@@ -207,13 +204,20 @@ stats['DIFF3'] = pyAlya.stats.molecularDiffusionBudget(mu,stats['RESTR'],mesh)
 
 prod  = 0.5*pyAlya.math.trace(stats['PRODU'])
 
-## Write MPIO if requested
-if SAVE_MPIO:
-	pyAlya.pprint(1,'Writing MPIO...',flush=True)
-	stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
-		'RESTR','AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
-		'AVPF2','AVTF2','AVPVE','AVVE3'])
+stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+	'AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
+	'AVPF2','AVTF2','TAYMS','KOLLS','KOLTS','CONVE','PRODU','DIFF1','DIFF2',
+	'DIFF3','PSTRA','DISSI','AVPVE','AVVE3'
+])
 
+
+### Write MPIO if requested
+#if SAVE_MPIO:
+#	pyAlya.pprint(1,'Writing MPIO...',flush=True)
+#	stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+#		'RESTR','AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
+#		'AVPF2','AVTF2','AVPVE','AVVE3'])
+#
 pyAlya.cr_info()
 exit(0) # Stop the run so as not to overload the GPFS
 
