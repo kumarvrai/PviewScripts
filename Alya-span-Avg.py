@@ -56,9 +56,7 @@ if('BUD' not in file_fmt):
     case.PointArrays = ['TURBU','VELOC','PRESS']
 else:
    if(model == "BASIC"):
-    case.PointArrays = ['AVVEL', 'AVPRE', 'AVVE2', 'AVVXY']
-   elif(model == "EXTEND"):
-    case.PointArrays = ['AVVEL', 'AVPRE', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
+    case.PointArrays = ['AVVEL', 'AVPRE', 'AVPGR', 'AVVGR', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
 case.UpdatePipeline()
 caseVarNames = case.PointArrays
 print("--|| ALYA : LOADED VARIABLES", caseVarNames)
