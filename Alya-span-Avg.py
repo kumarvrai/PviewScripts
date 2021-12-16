@@ -57,6 +57,8 @@ if('BUD' not in file_fmt):
 else:
    if(model == "BASIC"):
     case.PointArrays = ['AVVEL', 'AVPRE', 'AVPGR', 'AVVGR', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
+   elif(model == "TSTEP"):
+    case.PointArrays = ['VELOC', 'PRESS']
 case.UpdatePipeline()
 caseVarNames = case.PointArrays
 print("--|| ALYA : LOADED VARIABLES", caseVarNames)
@@ -79,22 +81,22 @@ Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
 print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 
 if("SAVG" in mode):
- ## CALCULATE AVVE2 and AVVXY VARIABLES ###
- print("--|| ALYA :: CALCULATE AVVE2 VARIABLES")
- startTime = time.time()
- case = Calculator(Input=case)
- case.ResultArrayName = "VE2EL"
- case.Function = "VELOC_X*VELOC_X*iHat + VELOC_Y*VELOC_Y*jHat + VELOC_Z*VELOC_Z*kHat" 
- case.UpdatePipeline()
- case = Calculator(Input=case)
- case.ResultArrayName = "VXYEL"
- case.Function = "VELOC_X*VELOC_Y*iHat + VELOC_Y*VELOC_Z*jHat + VELOC_X*VELOC_Z*kHat" 
- case.UpdatePipeline()
- print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+ if('PVD' not in file_fmt):
+   ## CALCULATE AVVE2 and AVVXY VARIABLES ###
+   print("--|| ALYA :: CALCULATE AVVE2 VARIABLES")
+   startTime = time.time()
+   case = Calculator(Input=case)
+   case.ResultArrayName = "VE2EL"
+   case.Function = "VELOC_X*VELOC_X*iHat + VELOC_Y*VELOC_Y*jHat + VELOC_Z*VELOC_Z*kHat" 
+   case.UpdatePipeline()
+   case = Calculator(Input=case)
+   case.ResultArrayName = "VXYEL"
+   case.Function = "VELOC_X*VELOC_Y*iHat + VELOC_Y*VELOC_Z*jHat + VELOC_X*VELOC_Z*kHat" 
+   case.UpdatePipeline()
+   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 elif("FAVG" in mode):
-
- if('BUD' not in file_fmt):
+ if('PVD' not in file_fmt):
    print("--|| ALYA :: TEMPORAL AVERAGING  ALYA-AVERAGED ARRAYS")
    startTime = time.time()
    case = TemporalStatistics(Input=case)
@@ -518,7 +520,7 @@ if('2D' in dim):
   startTime = time.time()
   #savePath = casePath+"/AvgData_2D_"+mode+"_"+method+".vtm"
   if('PVD' in file_fmt): 
-   savePath = casePath+"/AvgData_2D.vtk"
+   savePath = casePath+"/AvgData_2D.vtu"
   else:
    savePath = casePath+"/AvgData_2D.vtm"
   savePath2 = casePath+"/AvgData_2D.csv"
@@ -526,8 +528,11 @@ if('2D' in dim):
    #SaveData(savePath, proxy=dataSet)
    SaveData(savePath, proxy=PF1, Writetimestepsasfileseries=1)
   else:
-   SaveData(savePath, proxy=PF1)
-   SaveData(savePath2, proxy=PF1)
+   if(model == "TSTEP"):
+     SaveData(savePath, proxy=PF1, Writetimestepsasfileseries=1)
+   else:  
+     SaveData(savePath, proxy=PF1)
+     SaveData(savePath2, proxy=PF1)
   print("----|| ALYA: FINAL STATISTICS FILE WRITTEN AS: ",savePath)
   print("--|| ALYA: FILE SAVED. TIME =",time.time()-startTime,'sec')
   ########### STREAMWISE AVERAGING ################
