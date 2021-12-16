@@ -77,12 +77,12 @@ for instant in listOfInstants:
 stats['AVPGR'] = mesh.gradient(stats['AVPRE'])
 stats['AVVGR'] = mesh.gradient(stats['AVVEL'])
 # calculate RS stresses from Alya files
-stats['RS_II'][:,0] = stats['AVVE2'][:,0]-stats['AVVEL'][:,0]**2   #uu
-stats['RS_II'][:,1] = stats['AVVE2'][:,1]-stats['AVVEL'][:,1]**2   #vv
-stats['RS_II'][:,2] = stats['AVVE2'][:,2]-stats['AVVEL'][:,2]**2   #ww
-stats['RS_IJ'][:,0] = stats['AVVXY'][:,0]-stats['AVVEL'][:,0]*stats['AVVEL'][:,1]  #uv
-stats['RS_IJ'][:,1] = stats['AVVXY'][:,1]-stats['AVVEL'][:,1]*stats['AVVEL'][:,2]  #vw
-stats['RS_IJ'][:,2] = stats['AVVXY'][:,2]-stats['AVVEL'][:,0]*stats['AVVEL'][:,2]  #uw
+stats['RS_II'][:,0] = stats['AVVE2'][:,0]-np.square(stats['AVVEL'][:,0])   #uu
+stats['RS_II'][:,1] = stats['AVVE2'][:,1]-np.square(stats['AVVEL'][:,1])   #vv
+stats['RS_II'][:,2] = stats['AVVE2'][:,2]-np.square(stats['AVVEL'][:,2])   #ww
+stats['RS_IJ'][:,0] = stats['AVVXY'][:,0]-np.multiply(stats['AVVEL'][:,0],stats['AVVEL'][:,1])  #uv
+stats['RS_IJ'][:,1] = stats['AVVXY'][:,1]-np.multiply(stats['AVVEL'][:,1],stats['AVVEL'][:,2])  #vw
+stats['RS_IJ'][:,2] = stats['AVVXY'][:,2]-np.multiply(stats['AVVEL'][:,0],stats['AVVEL'][:,2])  #uw
 
 
 stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt=FILE_FMT)
