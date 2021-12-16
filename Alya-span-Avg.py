@@ -10,8 +10,8 @@ from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 from paraview.vtk.numpy_interface import dataset_adapter as dsa
 from vtk.numpy_interface import algorithms as algs 
 from scipy.interpolate import griddata
-casePath = os.getcwd()
 
+casePath = os.getcwd()
 
 caseName = sys.argv[1]
 model    = sys.argv[2]
@@ -64,17 +64,31 @@ caseVarNames = case.PointArrays
 print("--|| ALYA : LOADED VARIABLES", caseVarNames)
 print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
-if('PVD' in file_fmt):
+inpFile = os.getcwd()+'/'+'inputFile.py'
+f = open(inpFile,'w')
+f.write("caseName = '%s'\n" % caseName)
+f.write("fileName = '%s'\n" % fileName)
+f.write("model = '%s'\n" % model)
+f.write("nu = %f\n" % nu)
+f.write("dim = '%s'\n" % dim)
+f.write("mode = '%s'\n" % mode)
+f.write("method = '%s'\n" % method)
+f.write("file_fmt = '%s'\n" % file_fmt)
+f.write("xDec = %d\n" % xDec)
+f.write("zDec = %d\n" % zDec)
+f.close()
+
+#if('PVD' in file_fmt):
   #print("--|| ALYA :: APPLYING D3 FILTER")
   #startTime = time.time()
   #case = D3(Input=case)
   #case.UpdatePipeline()
   #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-  print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
-  startTime = time.time()
-  case = CleantoGrid(Input=case)
-  case.UpdatePipeline()
-  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+  #print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
+  #startTime = time.time()
+  #case = CleantoGrid(Input=case)
+  #case.UpdatePipeline()
+  #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 
 Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
@@ -229,14 +243,21 @@ if("PINTERP" in method):
   PF1 = ProgrammableFilter(Input=[slice1]+resample_transforms)
   PF1.Script = \
 """
+import os
+import sys
 import numpy as np
+
+inpFile = os.getcwd()+'/'+'inputFile.py'
+exec(open(inpFile).read())
+
+pid = os.getpid()
 t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 print("--|| ALYA: WORKING ON %.3f TIME-STEP DATA" % (t))
 varFull = []
 varFull = inputs[0].PointData.keys()
-print("----|| Alya - WORKING ON ARRAYS::",varFull)
+print("----|| ALYA : PID = %d ARRAYS: " % (pid) ,varFull)
 N=len(inputs)-1;
-print("--|| ALYA: AVERAGING %d DATA-PLANES" % (N))
+#print("--|| ALYA: AVERAGING %d DATA-PLANES" % (N))
 
 for varName in varFull:
  if("FAVG" in mode):
@@ -257,27 +278,33 @@ else:
   caseVarOrig = slice1.PointData.keys()
   print("--|| ALYA :: CALCULATE SPANWISE AVERAGING")
   startTime = time.time()
-  PF1 = ProgrammableFilter(Input=[case,slice1])
+  PF1 = ProgrammableFilter(Input=[slice1,case])
   ### first input is the grid
   ### the rest of them are data to be averaged
   PF1.Script = \
 """
+import os
 import numpy as np
-t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-varFull = inputs[0].PointData.keys()
-print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
+from scipy.interpolate import griddata
+inpFile = os.getcwd()+'/'+'inputFile.py'
+exec(open(inpFile).read())
+
+t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
+varFull = inputs[1].PointData.keys()
+
+#print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
 if('ensi' in fileName):
- d = dsa.WrapDataObject(inputs[0].GetBlock(0))
+ d = dsa.WrapDataObject(inputs[1].GetBlock(0))
 elif('pvd' in fileName):
- d = dsa.WrapDataObject(inputs[0].VTKObject)
+ d = dsa.WrapDataObject(inputs[1].VTKObject)
 x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
 y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
 z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
 ## SLICE GEOMETRY
 if('ensi' in fileName):
- out = dsa.WrapDataObject(inputs[1].GetBlock(0))
+ out = dsa.WrapDataObject(inputs[0].GetBlock(0))
 elif('pvd' in fileName):
- out = dsa.WrapDataObject(inputs[1].VTKObject)
+ out = dsa.WrapDataObject(inputs[0].VTKObject)
 x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
 y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
 ind_2d = np.lexsort((y_2d,x_2d));
@@ -286,7 +313,7 @@ z_vec = np.unique(z)
 N = len(z_vec)
 
 for varName in varFull:
- print("--|| ALYA :: CALCULATING FOR",varName)
+ #print("--|| ALYA :: CALCULATING FOR",varName)
  if("FAVG" in mode):
   varName0 = varName[0:5]
  else:
@@ -309,7 +336,7 @@ for varName in varFull:
    raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE AVERGAES?')
  avg = avg/N;
  avg = np.asarray(avg, dtype=np.float64)
- output.ShallowCopy(inputs[1].VTKObject)
+ #output.ShallowCopy(inputs[1])
  output.PointData.append(avg, varName0)
 
 """
@@ -341,7 +368,12 @@ if("SAVG" in mode):
     PF1 = ProgrammableFilter(Input=[PF1]+resample_transforms)
     PF1.Script = \
   """
+  import os
   import numpy as np
+  from scipy.interpolate import griddata
+  inpFile = os.getcwd()+'/'+'inputFile.py'
+  exec(open(inpFile).read())
+
   t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
   print("--|| ALYA: WORKING ON %.3f TIME-STEP DATA" % (t))
   varFull = ['PRESS']
@@ -359,26 +391,30 @@ if("SAVG" in mode):
      avg = avg + (s_src-a_src)**2
    avg = avg/N
    avg = np.asarray(avg, dtype=np.float64)
-   output.ShallowCopy(inputs[0].VTKObject)
    output.PointData.append(avg,varName0)
   """
   else:
-    PF1 = ProgrammableFilter(Input=[case,PF1])
+    PF1 = ProgrammableFilter(Input=[PF1,case])
     ### first input is the grid
     ### the rest of them are data to be averaged
     PF1.Script = \
   """
+  import os
   import numpy as np
-  t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-  #varFull = inputs[0].PointData.keys()
+  from scipy.interpolate import griddata
+  inpFile = os.getcwd()+'/'+'inputFile.py'
+  exec(open(inpFile).read())
+
+  t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
+  #varFull = inputs[1].PointData.keys()
   varFull = ['PRESS']
   print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
-  d = dsa.WrapDataObject(inputs[0].GetBlock(0))
+  d = dsa.WrapDataObject(inputs[1].GetBlock(0))
   x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
   y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
   z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
   ## SLICE GEOMETRY
-  out = dsa.WrapDataObject(inputs[1].GetBlock(0))
+  out = dsa.WrapDataObject(inputs[0].GetBlock(0))
   x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
   y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
   ind_2d = np.lexsort((y_2d,x_2d));
@@ -409,7 +445,6 @@ if("SAVG" in mode):
      raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE STD?')
    avg = avg/N;
    avg = np.asarray(avg, dtype=np.float64)
-   output.ShallowCopy(inputs[1].VTKObject)
    output.PointData.append(avg, varName0)
   
   """
@@ -423,14 +458,18 @@ if("SAVG" in mode):
   PF1 = ProgrammableFilter(Input=PF1)
   PF1.Script = \
   """
+  import os
   import numpy as np
+  from scipy.interpolate import griddata
+  inpFile = os.getcwd()+'/'+'inputFile.py'
+  exec(open(inpFile).read())
+
   varFull = inputs[0].PointData.keys()
   for varName in varFull:
    if("SAVG" in mode):
-    if not varName in caseVarOrig:
-     print("----|| INFO :: APPENDING",varName)
-     inp0 = inputs[0].PointData[varName]
-     output.PointData.append(inp0,varName)
+    print("----|| INFO :: APPENDING",varName)
+    inp0 = inputs[0].PointData[varName]
+    output.PointData.append(inp0,varName)
    elif("FAVG" in mode):
     if not "_average" in varName:
      inp0 = inputs[0].PointData[varName]
@@ -520,7 +559,7 @@ if('2D' in dim):
   startTime = time.time()
   #savePath = casePath+"/AvgData_2D_"+mode+"_"+method+".vtm"
   if('PVD' in file_fmt): 
-   savePath = casePath+"/AvgData_2D.vtu"
+   savePath = casePath+"/AvgData_2D.pvd"
   else:
    savePath = casePath+"/AvgData_2D.vtm"
   savePath2 = casePath+"/AvgData_2D.csv"
