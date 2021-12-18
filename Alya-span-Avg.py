@@ -243,20 +243,22 @@ if("PINTERP" in method):
   PF1.Script = \
 """
 import os
+import vtk
 import sys
 import numpy as np
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read())
 
-pid = os.getpid()
+c = vtk.vtkMultiProcessController.GetGlobalController()
+rank = c.GetLocalProcessId()
 t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-print("--|| ALYA: WORKING ON %.3f TIME-STEP DATA" % (t))
-varFull = []
+
 varFull = inputs[0].PointData.keys()
-print("----|| ALYA : PID = %d ARRAYS: " % (pid) ,varFull)
+if(rank==0):
+  print("----|| ALYA : ARRAYS AT TIME %.3f " % (t) ,varFull)
+
 N=len(inputs)-1;
-#print("--|| ALYA: AVERAGING %d DATA-PLANES" % (N))
 
 for varName in varFull:
  if("FAVG" in mode):
@@ -283,15 +285,21 @@ else:
   PF1.Script = \
 """
 import os
+import vtk
 import numpy as np
 from scipy.interpolate import griddata
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read())
 
+c = vtk.vtkMultiProcessController.GetGlobalController()
+rank = c.GetLocalProcessId()
+
 t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 varFull = inputs[1].PointData.keys()
 
-#print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
+if(rank==0):
+  print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
+
 if('ensi' in fileName):
  d = dsa.WrapDataObject(inputs[1].GetBlock(0))
 elif('pvd' in fileName):
@@ -299,15 +307,19 @@ elif('pvd' in fileName):
 x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
 y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
 z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
+
 ## SLICE GEOMETRY
 if('ensi' in fileName):
  out = dsa.WrapDataObject(inputs[0].GetBlock(0))
 elif('pvd' in fileName):
  out = dsa.WrapDataObject(inputs[0].VTKObject)
+
 x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
 y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
 ind_2d = np.lexsort((y_2d,x_2d));
-print("----|| ALYA CHECK :: SHAPE OF SLICE", np.shape(ind_2d))
+
+if(rank==0):
+  print("----|| ALYA CHECK :: SHAPE OF SLICE", np.shape(ind_2d))
 z_vec = np.unique(z)
 N = len(z_vec)
 
@@ -368,17 +380,22 @@ if("SAVG" in mode):
     PF2.Script = \
   """
   import os
+  import vtk
   import numpy as np
   from scipy.interpolate import griddata
   inpFile = os.getcwd()+'/'+'inputFile.py'
   exec(open(inpFile).read())
 
-  t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-  print("--|| ALYA: WORKING ON %.3f TIME-STEP DATA" % (t))
+  c = vtk.vtkMultiProcessController.GetGlobalController()
+  rank = c.GetLocalProcessId()
+
   varFull = ['PRESS']
-  print("----|| Alya - WORKING ON ARRAYS::",varFull)
+
+  if(rank==0):
+    t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
+    print("----|| ALYA : ARRAYS AT TIME %.3f " % (t), varFull)
+
   N=len(inputs)-1;
-  print("--|| ALYA: AVERAGING %d DATA-PLANES" % (N))
   
   for varName in varFull:
     avgVarName = "AV"+varName[0:3]
@@ -399,15 +416,21 @@ if("SAVG" in mode):
     PF2.Script = \
   """
   import os
+  import vtk
   import numpy as np
   from scipy.interpolate import griddata
   inpFile = os.getcwd()+'/'+'inputFile.py'
   exec(open(inpFile).read())
 
-  t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-  #varFull = inputs[1].PointData.keys()
+  c = vtk.vtkMultiProcessController.GetGlobalController()
+  rank = c.GetLocalProcessId()
+
   varFull = ['PRESS']
-  #print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
+
+  if(rank==0):
+    t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
+    print("--|| ALYA :: ARRAYS AT TIME %.3f " % (t), varFull) 
+
   if('ensi' in fileName):
     d = dsa.WrapDataObject(inputs[1].GetBlock(0))
   elif('pvd' in fileName):
@@ -428,7 +451,6 @@ if("SAVG" in mode):
   N = len(z_vec)
   
   for varName in varFull:
-   #print("--|| ALYA :: CALCULATING FOR",varName)
    avgVarName = "AV"+varName[0:3]
    varName0 = "SD"+varName[0:3]
    avg = 0.0*np.asarray(out.PointData[avgVarName],dtype=np.double)
@@ -436,7 +458,6 @@ if("SAVG" in mode):
    a_src = np.asarray(out.PointData[avgVarName],dtype=np.double)
    for n in range(N):
     ind_z = np.where(z == z_vec[n])
-    #print("--|| ALYA CHECK :: AT n,Z=",n,zpos[n],"SHAPE OF MASTER DATASET", np.shape(ind_z))
     x_l = x[ind_z];
     y_l = y[ind_z];
     s_src = src[ind_z]
