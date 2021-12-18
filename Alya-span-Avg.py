@@ -78,24 +78,23 @@ f.write("xDec = %d\n" % xDec)
 f.write("zDec = %d\n" % zDec)
 f.close()
 
-#if('PVD' in file_fmt):
+if('PVD' in file_fmt):
   #print("--|| ALYA :: APPLYING D3 FILTER")
   #startTime = time.time()
   #case = D3(Input=case)
   #case.UpdatePipeline()
   #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-  #print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
-  #startTime = time.time()
-  #case = CleantoGrid(Input=case)
-  #case.UpdatePipeline()
-  #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+  print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
+  startTime = time.time()
+  case = CleantoGrid(Input=case)
+  case.UpdatePipeline()
+  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 
 Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
 print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 
 if("SAVG" in mode):
- if('PVD' not in file_fmt):
    ## CALCULATE AVVE2 and AVVXY VARIABLES ###
    print("--|| ALYA :: CALCULATE AVVE2 VARIABLES")
    startTime = time.time()
@@ -365,8 +364,8 @@ if("SAVG" in mode):
     
     print("--|| ALYA: STD-CALC USING A PROGRAMMABLE FILTER")
     startTime = time.time()
-    PF1 = ProgrammableFilter(Input=[PF1]+resample_transforms)
-    PF1.Script = \
+    PF2 = ProgrammableFilter(Input=[PF1]+resample_transforms)
+    PF2.Script = \
   """
   import os
   import numpy as np
@@ -394,10 +393,10 @@ if("SAVG" in mode):
    output.PointData.append(avg,varName0)
   """
   else:
-    PF1 = ProgrammableFilter(Input=[PF1,case])
+    PF2 = ProgrammableFilter(Input=[PF1,case])
     ### first input is the grid
     ### the rest of them are data to be averaged
-    PF1.Script = \
+    PF2.Script = \
   """
   import os
   import numpy as np
@@ -408,13 +407,19 @@ if("SAVG" in mode):
   t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
   #varFull = inputs[1].PointData.keys()
   varFull = ['PRESS']
-  print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
-  d = dsa.WrapDataObject(inputs[1].GetBlock(0))
+  #print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
+  if('ensi' in fileName):
+    d = dsa.WrapDataObject(inputs[1].GetBlock(0))
+  elif('pvd' in fileName):
+    d = dsa.WrapDataObject(inputs[1].VTKObject)
   x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
   y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
   z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
   ## SLICE GEOMETRY
-  out = dsa.WrapDataObject(inputs[0].GetBlock(0))
+  if('ensi' in fileName):
+    out = dsa.WrapDataObject(inputs[0].GetBlock(0))
+  elif('pvd' in fileName):
+    out = dsa.WrapDataObject(inputs[0].VTKObject)
   x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
   y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
   ind_2d = np.lexsort((y_2d,x_2d));
@@ -423,10 +428,10 @@ if("SAVG" in mode):
   N = len(z_vec)
   
   for varName in varFull:
-   print("--|| ALYA :: CALCULATING FOR",varName)
+   #print("--|| ALYA :: CALCULATING FOR",varName)
    avgVarName = "AV"+varName[0:3]
    varName0 = "SD"+varName[0:3]
-   avg = 0.0*np.asarray(out.PointData[varName],dtype=np.double)
+   avg = 0.0*np.asarray(out.PointData[avgVarName],dtype=np.double)
    src = np.asarray(d.PointData[varName],dtype=np.double)
    a_src = np.asarray(out.PointData[avgVarName],dtype=np.double)
    for n in range(N):
@@ -448,35 +453,37 @@ if("SAVG" in mode):
    output.PointData.append(avg, varName0)
   
   """
-  PF1.UpdatePipeline() 
+  PF2.UpdatePipeline() 
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   print("--|| ALYA :: WORKSPACE VARIABLES AFTER STD-DEV CALC", PF1.PointData.keys())
 
-  ## APPEND SPECIFIC VARIABLES ###
+  ### APPEND SPECIFIC VARIABLES ###
   print("--|| ALYA :: APPEND AVERAGED VARIABLES")
   startTime = time.time()
-  PF1 = ProgrammableFilter(Input=PF1)
-  PF1.Script = \
-  """
-  import os
-  import numpy as np
-  from scipy.interpolate import griddata
-  inpFile = os.getcwd()+'/'+'inputFile.py'
-  exec(open(inpFile).read())
-
-  varFull = inputs[0].PointData.keys()
-  for varName in varFull:
-   if("SAVG" in mode):
-    print("----|| INFO :: APPENDING",varName)
-    inp0 = inputs[0].PointData[varName]
-    output.PointData.append(inp0,varName)
-   elif("FAVG" in mode):
-    if not "_average" in varName:
-     inp0 = inputs[0].PointData[varName]
-     output.PointData.append(inp0,varName)
-  """
-  PF1.UpdatePipeline() 
+  PF1 = AppendAttributes(Input=[PF1,PF2])
+  PF1.UpdatePipeline()
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+  #PF1 = ProgrammableFilter(Input=PF1)
+  #PF1.Script = \
+  #"""
+  #import os
+  #import numpy as np
+  #from scipy.interpolate import griddata
+  #inpFile = os.getcwd()+'/'+'inputFile.py'
+  #exec(open(inpFile).read())
+
+  #varFull = inputs[0].PointData.keys()
+  #for varName in varFull:
+  # if("SAVG" in mode):
+  #  print("----|| INFO :: APPENDING",varName)
+  #  inp0 = inputs[0].PointData[varName]
+  #  output.PointData.append(inp0,varName)
+  # elif("FAVG" in mode):
+  #  if not "_average" in varName:
+  #   inp0 = inputs[0].PointData[varName]
+  #   output.PointData.append(inp0,varName)
+  #"""
+  #PF1.UpdatePipeline() 
   print("--|| ALYA :: WORKSPACE VARIABLES AFTER APPEND", PF1.PointData.keys())
 
 #  # EXTRACT DATA AT SPECIFIC TIMES
@@ -558,20 +565,23 @@ if('2D' in dim):
   print("--|| ALYA: SAVING THE AVERAGED FILES")
   startTime = time.time()
   #savePath = casePath+"/AvgData_2D_"+mode+"_"+method+".vtm"
-  if('PVD' in file_fmt): 
-   savePath = casePath+"/AvgData_2D.pvd"
-  else:
-   savePath = casePath+"/AvgData_2D.vtm"
   savePath2 = casePath+"/AvgData_2D.csv"
   if("SAVG" in mode):
-   #SaveData(savePath, proxy=dataSet)
-   SaveData(savePath, proxy=PF1, Writetimestepsasfileseries=1)
+    if('PVD' in file_fmt): 
+      savePath = casePath+"/AvgData_2D.pvd"
+    else:
+      savePath = casePath+"/AvgData_2D.vtm"
+    SaveData(savePath, proxy=PF1, WriteTimeSteps=1)
   else:
-   if(model == "TSTEP"):
-     SaveData(savePath, proxy=PF1, Writetimestepsasfileseries=1)
-   else:  
-     SaveData(savePath, proxy=PF1)
-     SaveData(savePath2, proxy=PF1)
+    if('PVD' in file_fmt): 
+      savePath = casePath+"/AvgData_2D.pvd"
+    else:
+      savePath = casePath+"/AvgData_2D.vtm"
+    if(model == "TSTEP"):
+      SaveData(savePath, proxy=PF1, WriteTimeSteps=1)
+    else:  
+      SaveData(savePath, proxy=PF1)
+      SaveData(savePath2, proxy=PF1)
   print("----|| ALYA: FINAL STATISTICS FILE WRITTEN AS: ",savePath)
   print("--|| ALYA: FILE SAVED. TIME =",time.time()-startTime,'sec')
   ########### STREAMWISE AVERAGING ################
