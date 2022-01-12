@@ -213,7 +213,7 @@ prod  = 0.5*pyAlya.math.trace(stats['PRODU'])
 
 ### Write MPIO if requested
 pyAlya.pprint(1,'Writing MPIO...',flush=True)
-	stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
 		'RESTR','AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
 		'AVPF2','AVTF2','AVPVE','AVVE3'])
 
