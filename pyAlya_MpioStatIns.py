@@ -59,8 +59,6 @@ stats = pyAlya.Field(xyz  = pyAlya.truncate(mesh.xyz,6),
 					AVROT = mesh.newArray(ndim=9),  # Averaged rotation rate
 					AVSHE = mesh.newArray(ndim=9),  # Averaged shear stresses
 					RESTR = mesh.newArray(ndim=9),  # Reynolds stresses
-					RS_II = mesh.newArray(ndim=3),  # Principal Reynolds stresses
-					RS_IJ = mesh.newArray(ndim=3),  # Shear Reynolds stresses
 					AVSTF = mesh.newArray(ndim=9),  # Averaged strain rate
 					AVRTF = mesh.newArray(ndim=9),  # Averaged rotation rate
 					AVTHF = mesh.newArray(ndim=3),	# Averaged turbulent heat flux
@@ -180,12 +178,6 @@ stats['AVSTF'] = stats['AVSTF']/len(listOfInstants)
 stats['AVRTF'] = stats['AVRTF']/len(listOfInstants) 
 stats['PSTRA'] = stats['PSTRA']/len(listOfInstants) 
 stats['DISSI'] = stats['DISSI']/len(listOfInstants)
-stats['RS_II'][:,0] = stats['RESTR'][:,0]
-stats['RS_II'][:,1] = stats['RESTR'][:,4]
-stats['RS_II'][:,2] = stats['RESTR'][:,8]
-stats['RS_IJ'][:,0] = stats['RESTR'][:,1]
-stats['RS_IJ'][:,1] = stats['RESTR'][:,5]
-stats['RS_IJ'][:,2] = stats['RESTR'][:,2]
 # Compute TKE and dissipation
 k     = pyAlya.stats.TKE(stats['RESTR'])
 dissi = 0.5*pyAlya.math.trace(stats['DISSI']) # e = 1/2*e_ii = 2*mu*<S'_ij S'_ij>
