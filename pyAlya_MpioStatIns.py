@@ -204,20 +204,19 @@ stats['DIFF3'] = pyAlya.stats.molecularDiffusionBudget(mu,stats['RESTR'],mesh)
 
 prod  = 0.5*pyAlya.math.trace(stats['PRODU'])
 
-stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
-	'AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
-	'AVPF2','AVTF2','TAYMS','KOLLS','KOLTS','CONVE','PRODU','DIFF1','DIFF2',
-	'DIFF3','PSTRA','DISSI','AVPVE','AVVE3'
-])
+#stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+#	'AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
+#	'AVPF2','AVTF2','TAYMS','KOLLS','KOLTS','CONVE','PRODU','DIFF1','DIFF2',
+#	'DIFF3','PSTRA','DISSI','AVPVE','AVVE3'
+#])
 
 
 ### Write MPIO if requested
-#if SAVE_MPIO:
-#	pyAlya.pprint(1,'Writing MPIO...',flush=True)
-#	stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
-#		'RESTR','AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
-#		'AVPF2','AVTF2','AVPVE','AVVE3'])
-#
+pyAlya.pprint(1,'Writing MPIO...',flush=True)
+	stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+		'RESTR','AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
+		'AVPF2','AVTF2','AVPVE','AVVE3'])
+
 pyAlya.cr_info()
 exit(0) # Stop the run so as not to overload the GPFS
 
