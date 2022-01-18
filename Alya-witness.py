@@ -7,12 +7,15 @@ import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import CFDlib as cfd
+from os.path import expanduser
+from scipy.interpolate import interp1d
 
 #######################################################################
 def calcSpectra(f, nWindows, iPeriodic):
   n = len(f)
   n = n/nWindows
-  print(n)
+  print('--|| FFT INFO : WINDOW SIGNAL LENGTH={}'.format(n))
   
   wss = 0.
   if iPeriodic:
@@ -21,8 +24,8 @@ def calcSpectra(f, nWindows, iPeriodic):
     wss = sum(np.hanning(n))
   
   for iWindow in range(0, nWindows, 1):
-    print('data window: {}'.format(iWindow))
-    print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
+    #print('data window: {}'.format(iWindow))
+    #print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
     fx = f[iWindow*n:(iWindow+1)*n]
   
     if iPeriodic:
@@ -53,9 +56,10 @@ def calcSpectra(f, nWindows, iPeriodic):
   afks[0] = 0.5*afks[0]
   pfks[0] = 0.5*pfks[0]
   
-  return pfks
+  return afks, pfks
 #######################################################################
 
+home = expanduser("~")
 casePath = os.getcwd()  
 
 
@@ -81,24 +85,19 @@ linestyles = [
 caseName	= sys.argv[1]
 airfoil 	= sys.argv[2]
 mode 		= sys.argv[3]
-skipInd 	= int(sys.argv[4]);
 
-skipL = 0;
-#indP = [6,7]
+indP = [6,7]
 #indP = [288]
 #indP = [4,5,6,7]
-indP = [0,1,2,3,4,5,6]
+#indP = [0,1,2,3,4,5,6]
 #indP = [11,12,13]
 #indP = [22,23]
 #indP = [5,6,7,8,9]
 #indP = [2,3,4,5,6,7,8,9,10,11]
 #indP = [24,25,26,27,28,29]
+#indP = [28,29]
 
 # LOAD AIRFOIL SPECIFIC FILES
-niaScrh = '/home/kvishal/projects/rrg-ugo-ac/kvishal/research/0.Alya/'
-niaHome = '/home/u/ugo/kvishal/'
-
-
 print('--|| ALYA INITIALIZING')
 plt.close("all")
 lw = 2;
@@ -113,13 +112,11 @@ plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 
 if('0012' in airfoil):
-  fileLoc = niaScrh+'/5.BGQ-DATA/NACA-0012/2.3D/2.LES/1.Re-5E4-alpha-8/3.WALE/1.run1/1.t-0-13/'
-  fAirU = '/home/kvishal/1.post_process/1.airfoil/3.PviewScripts/1.0012-Slices/naca0012-UP.txt'
-  fAirL = '/home/kvishal/1.post_process/1.airfoil/3.PviewScripts/1.0012-Slices/naca0012-DOWN.txt'
+  fAirU = home+'/1.post_process/1.airfoil/3.PviewScripts/1.0012-Slices/naca0012-UP.txt'
+  fAirL = home+'/1.post_process/1.airfoil/3.PviewScripts/1.0012-Slices/naca0012-DOWN.txt'
 elif('4412' in airfoil):  
-  fileLoc = niaScrh+'/2.NACA4412/2.ROUGH_CASE/1.trip/1.WRLES/2.Medium/'
-  fAirU = '/home/kvishal/1.post_process/1.airfoil/3.PviewScripts/2.4412-Slices/naca4412-UP.txt'
-  fAirL = '/home/kvishal/1.post_process/1.airfoil/3.PviewScripts/2.4412-Slices/naca4412-DOWN.txt'
+  fAirU = home+'/1.post_process/1.airfoil/3.PviewScripts/2.4412-Slices/naca4412-UP.txt'
+  fAirL = home+'/1.post_process/1.airfoil/3.PviewScripts/2.4412-Slices/naca4412-DOWN.txt'
 else:
   sys.exit("--||Alya (ERROR): AIRFOIL NOT IN THE LIST")
 
@@ -145,7 +142,7 @@ n = len(indP)
 color = plt.cm.rainbow(np.linspace(0.0,1.0,n)) # This returns RGBA; convert:
 hexcolor = map(lambda rgb:'#%02x%02x%02x' % (rgb[0]*255,rgb[1]*255,rgb[2]*255),
                tuple(color[:,0:-1]))
-mpl.rcParams['axes.color_cycle'] = hexcolor
+#mpl.rcParams['axes.color_cycle'] = hexcolor
 
 if("SHOWPTS" in mode):
   print('--|| ALYA :: PLOTTING AIRFOIL WITNESS POINTS ONLY.')
@@ -194,79 +191,38 @@ if("SHOWPTS" in mode):
         labelbottom=True,
         labeltop=False) # labels along the bottom edge are off
 else:  
-  fname = caseName+'.nsi.wit'
-  nLinesWit	= len(open('%s'%fname).readlines())
-  if(skipL):
-   skipLines = nLinesWit-30000*(nWit+2)
-   print('--|| ALYA :: SKIPPING ',skipLines,'LINES OUT OF', nLinesWit,'LINES IN FILE')
-  else:
-   skipLines = 0
-  #data = np.loadtxt(fname, dtype=float, comments='#', skiprows=skipLines)
-  print('--|| ALYA :: SKIPPING EVERY %d DATA POINTS.' % skipInd)
-  data = np.empty((0,5),dtype='float')
-  
-  print('--|| ALYA :: READING WIT POINT TIME.')
+  print('--|| ALYA :: READING WITNESS DATA.')
   stime = time.time()
-  t = [];
-  for line in open(fname):
-    li=line.strip()
-    if 'Time' in li:
-      t.append([float(li.split()[3])])
-  t = np.asarray(t,dtype='float')   
-  if(skipInd):
-    ind = np.arange(0, t.size, skipInd)
-    t = t[ind]
+  time_data, wit_data = cfd.ExportReadProbe('./wit_data.bin')
   print('--|| ALYA :: DONE. TIME=',time.time()-stime)
-  print('--|| ALYA :: DATA-SET LENGTH = %d' % t.size)
+  
+  print('----|| INFO :: %d TIME VALUES RANGE %.2f-%.2f'%(len(wit_data),time_data[0], time_data[-1]))
   
   if(any(string in mode for string in ["PSD","THIS"])):
     import scipy.signal as signal
-    indSpec = 1; print('----|| INFO :: USING VARIABLE INDEX ',indSpec)
-    print('--|| ALYA :: READING WIT POINT DATA.')
-    stime = time.time()
-    if(skipInd):
-     ii = 1;  #Count iterations
-     jj = 1 #Count witness points
-     for line in open(fname):
-       li=line.strip()
-       if not li.startswith("#"):
-         if (ii-1) % skipInd == 0: #Skip every skipInd iteration number
-           #if any(jj==(pp+1) for pp in indP):
-           li = np.array(map(float, line.split()));
-           data = np.vstack((data,li))
-         jj+=1;
-         if (jj-1) % nWit == 0:
-           ii+=1;
-           jj=1
-    else: 
-     data = np.loadtxt(fname, comments='#')
-    print('--|| ALYA :: DONE. TIME=',time.time()-stime)
     print('--|| ALYA :: ARRANGING ARRAYS MONOTONICALLY.')
     stime = time.time()
-    tM = np.maximum.accumulate(t)
-    print('----|| INFO :: TIME ARRAY SIZE=',np.size(t))
+    tM = np.maximum.accumulate(time_data)
     t, ind = np.unique(tM, return_index=True)
     print('----|| INFO :: UNIQUE TIME ARRAY SIZE=',np.size(t))
-    t.reshape(t.size,1)
     markFreq = int(np.amax((np.floor(len(t)/20),1),axis=None))
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
     for (i,j) in enumerate(indP):
-      print('----|| INFO :: PROCESSING -->',j)
-      #lab = r"$x/c="+str(witPoints[i,0])+",\; y/c="+str(witPoints[i,1])+"$";
+      print('----|| INFO :: PROCESSING POINT %d, x,y,z='%j, witPoints[j,:])
       lab = r'$P_{'+str(j+1)+'}$';
-      dataPoint = data[np.where(data[:,0]==(j+1)),:]; #Extract data
-      dataPoint = np.reshape(dataPoint, (dataPoint.shape[1],dataPoint.shape[2]))
+      dataPoint = wit_data[:,j]; #Extract data
       print('----|| INFO :: WITNESS ARRAY SIZE=',np.shape(dataPoint))
-      dataPoint = dataPoint[ind,:];
+      dataPoint = dataPoint[ind];
       print('----|| INFO :: UNIQUE WITNESS ARRAY SIZE=',np.shape(dataPoint))
-      ySignal = dataPoint[:,indSpec]-np.mean(dataPoint[:,indSpec],axis=None)
+      tSignal = t;
+      ySignal = dataPoint-np.mean(dataPoint,axis=None)
       ax = plt.subplot(len(indP), 1, i+1)
       if("THIS" in mode):
         print('--|| ALYA :: CALCULATE TIME HISTORY (THIS).')
 	N = 1000;
-	y1 = dataPoint[:,indSpec] - np.convolve(dataPoint[:,indSpec], np.ones(N)/N, mode='same')
+	y1 = dataPoint - np.convolve(dataPoint, np.ones(N)/N, mode='same')
 
-        plt.plot(t, dataPoint[:,indSpec], 'k',markevery=markFreq,linewidth=0.5,label=lab)
+        plt.plot(tSignal, dataPoint, 'k',markevery=markFreq,linewidth=0.5,label=lab)
         #plt.plot(t, y1, 'r--',markevery=markFreq,linewidth=0.5,label=lab)
         ax.annotate(lab, xy=(0.05, 1.2), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
                         horizontalalignment='left', verticalalignment='top')
@@ -277,16 +233,41 @@ else:
          ax.annotate(ylab, xy=(0.02, 0.55),xycoords='figure fraction',fontsize=MEDIUM_SIZE,rotation=90)
       elif("PSD" in mode):
         print('--|| ALYA :: CALCULATE POWER SPECTRA (PSD).')
-        nout = 10000
-        f = np.linspace(0.01, 2000, nout)
-        pgram = signal.lombscargle(t, ySignal, f)
-        plt.plot(f, pgram, 'k',markevery=markFreq,linewidth=lw,label=lab)
-        ax.annotate(lab, xy=(0.05, 1.1), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
-                        horizontalalignment='left', verticalalignment='top')
-        plt.ylabel(r'$E_{u''u''}$')
+        if('LOMB' in mode):
+          nout = 10000;
+          freq_min = 0.01; freq_max = 1000.0;
+          f = np.linspace(freq_min, freq_max, nout)
+          pgram = signal.lombscargle(tSignal, ySignal, f)
+        elif('FFT' in mode):
+          print('--|| ALYA :: INTERPOLATE CONSTANT TIME.')
+          fInterp = interp1d(tSignal,ySignal);
+          delta_t = np.amax(np.diff(tSignal),axis=None)
+          s_rate = 1.0/delta_t
+          print('----|| INFO :: SAMPLING FREQ = %.2f'% s_rate)
+          Nt = int((np.amax(tSignal,axis=None)-np.amin(tSignal,axis=None))/delta_t)+1
+          print('----|| INFO :: INTERPOLATING ON %d POINTS'%(Nt))
+          tSignal = np.linspace(np.amin(tSignal,axis=None),np.amax(tSignal,axis=None),Nt);
+          ySignal = fInterp(tSignal)
+          print('--|| ALYA :: DONE. TIME=',time.time()-stime)
+          amp,pgram = calcSpectra(ySignal, 10, 0)
+          #pgram = np.fft.fft(ySignal)
+          N = len(pgram); print('--|| INFO :: FFT LENGTH = %d'%N) 
+          n = np.arange(N)/2; 
+          T = float(N)/s_rate; 
+          f = n/T
+          #plt.stem(f, np.abs(pgram), 'b', \
+          # markerfmt=" ", basefmt="-b")
+          #plt.ylabel(r'$P_{u^\prime u^\prime}$')
+          #ax.set(xlim=(0, 10))
+        else:
+          raise ValueError('ALYA ERROR :: METHOD TO CALC PSD NOT SPECIFIED!')
+        plt.plot(f, pgram, 'k',markevery=markFreq,linewidth=0.5,label=lab)
+        plt.ylabel(r'$E_{u^\prime u^\prime}$')
         plt.yscale("log")
         plt.xscale("log")
-        ax.set(xlim=(1, 2000))
+        ax.set(xlim=(np.amin(f), np.amax(f)))
+        ax.annotate(lab, xy=(0.05, 1.1), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
+                        horizontalalignment='left', verticalalignment='top')
         #ax.legend()
         if(i==0):
          plt.plot(f[np.where(f>100)],10000.0*np.power(f[np.where(f>100)],-5.0/3),'b--')
@@ -299,13 +280,13 @@ else:
       if(i==0):
        # Hide the right and top spines
        ax.spines['top'].set_visible(False)
-       ax.spines['bottom'].set_visible(False)
+       ax.spines['bottom'].set_visible(True)
        ax.tick_params(
         axis='x',          # changes apply to the x-axis
         which='both',      # both major and minor ticks are affected
-        bottom=False,      # ticks along the bottom edge are off
+        bottom=True,      # ticks along the bottom edge are off
         top=False,         # ticks along the top edge are off
-        labelbottom=False) # labels along the bottom edge are off
+        labelbottom=True) # labels along the bottom edge are off
       elif(i==len(indP)-1):
        ax.spines['top'].set_visible(False)
        ax.spines['bottom'].set_visible(True)
@@ -337,7 +318,7 @@ else:
 	which='major',      # both major and minor ticks are affected
 	right=False)         # ticks along the top edge are off
 
-      plt.locator_params(axis='y', nbins=3)
+      # plt.locator_params(axis='y', nbins=3)
 
     plt.show()
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
