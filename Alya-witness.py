@@ -24,8 +24,8 @@ def calcSpectra(f, nWindows, iPeriodic):
     wss = sum(np.hanning(n))
   
   for iWindow in range(0, nWindows, 1):
-    #print('data window: {}'.format(iWindow))
-    #print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
+    print('data window: {}'.format(iWindow))
+    print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
     fx = f[iWindow*n:(iWindow+1)*n]
   
     if iPeriodic:
@@ -191,14 +191,25 @@ if("SHOWPTS" in mode):
         labelbottom=True,
         labeltop=False) # labels along the bottom edge are off
 else:  
-  print('--|| ALYA :: READING WITNESS DATA.')
-  stime = time.time()
-  time_data, wit_data = cfd.ExportReadProbe('./wit_data.bin')
-  print('--|| ALYA :: DONE. TIME=',time.time()-stime)
-  
-  print('----|| INFO :: %d TIME VALUES RANGE %.2f-%.2f'%(len(wit_data),time_data[0], time_data[-1]))
   
   if(any(string in mode for string in ["PSD","THIS"])):
+    print('--|| ALYA :: READING WITNESS DATA.')
+    stime = time.time()
+    if('U' in calcVar):
+      time_data, wit_data = cfd.ExportReadProbe('./naca-VELOX.wit.bin')
+    elif('V' in calcVar):
+      time_data, wit_data = cfd.ExportReadProbe('./naca-VELOY.wit.bin')
+    elif('W' in calcVar):
+      time_data, wit_data = cfd.ExportReadProbe('./naca-VELOZ.wit.bin')
+    elif('P' in calcVar):
+      time_data, wit_data = cfd.ExportReadProbe('./naca-PRESS.wit.bin')
+    else:
+      raise ValueError('ALYA ERROR :: VARIABLE NOT SPECIFIED!')
+    print('--|| ALYA :: DONE. TIME=',time.time()-stime)
+
+    print('----|| INFO :: %d TIME VALUES RANGE %.2f-%.2f'%(len(wit_data),time_data[0], time_data[-1]))
+  
+
     import scipy.signal as signal
     print('--|| ALYA :: ARRANGING ARRAYS MONOTONICALLY.')
     stime = time.time()
@@ -325,55 +336,44 @@ else:
 
      
   elif("TPCORR" in mode):
+    calcVar = 'UU'
+    print('--|| INFO :: TWO-POINT CORRELATION ON %s'% calcVar)
+    print('--|| ALYA :: READING WITNESS DATA.')
+    stime = time.time()
+    if('UU' in calcVar):
+      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOX.wit.bin')
+      wit_data_1 = wit_data_0;
+    elif('VV' in calcVar):
+      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOY.wit.bin')
+      wit_data_1 = wit_data_0;
+    elif('WW' in calcVar):
+      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOZ.wit.bin')
+      wit_data_1 = wit_data_0;
+    elif('PP' in calcVar):
+      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-PRESS.wit.bin')
+      wit_data_1 = wit_data_0;
+    elif('UV' in calcVar):
+      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOX.wit.bin')
+      time_data, wit_data_1 = cfd.ExportReadProbe('./naca-VELOY.wit.bin')
+    else:
+      raise ValueError('ALYA ERROR :: VARIABLE NOT SPECIFIED!')
+    print('----|| INFO :: %d TIME VALUES RANGE %.2f-%.2f'%(len(time_data),time_data[0], time_data[-1]))
+
+    print('--|| ALYA :: DONE. TIME=',time.time()-stime)
     markFreq = int(np.amax((np.floor(len(z)/20),1),axis=None))
     print('--|| ALYA :: MARKER FREQ=',markFreq)
-    print('--|| ALYA :: READING WIT POINT DATA.')
-    stime = time.time()
-    if(skipInd):
-     cntGlob = 0
-     count = 1;
-     for line in open(fname):
-       li=line.strip()
-       if not li.startswith("#"):
-         cntGlob+=1;
-         if (cntGlob-1) % nWit == 0:
-          count+=1;
-         if count % skipInd == 0:
-          li = np.array(map(float, line.split()));
-          data = np.vstack((data,li))
-    else:	  
-     data = np.loadtxt(fname, comments='#')
-    print('--|| ALYA :: DONE. TIME=',time.time()-stime)
     print('--|| ALYA :: CALCULATING WIT POINT CORRELATIONS.')
     stime = time.time()
     uu = np.zeros((len(z),len(indP)),dtype=float)
-    uv = np.zeros((len(z),len(indP)),dtype=float)
-    pp = np.zeros((len(z),len(indP)),dtype=float)
-    up = np.zeros((len(z),len(indP)),dtype=float)
     for j in indPLabel:
-     u0 = data[np.where(data[:,0]==(j+1)),1]; u0 = u0-np.mean(u0,axis=1);
-     v0 = data[np.where(data[:,0]==(j+1)),2]; v0 = v0-np.mean(v0,axis=1);
-     ip = 3
-     p0 = data[np.where(data[:,0]==(j+1)),ip]; p0 = p0-np.mean(p0,axis=1);
+     u0 = wit_data_0[:,j+1]; u0 = u0-np.mean(u0);
      for i in range(len(z)):
       pair = i*nz+j+1;
       #print(j+1,pair);
-      # Calculate uu
-      u1 = data[np.where(data[:,0]==pair),1]; u1 = u1-np.mean(u1,axis=1);
+      # Calculate the correlation b/w 2 signals
+      u1 = wit_data_1[:,pair]; u1 = u1-np.mean(u1);
       prod = np.multiply(u0,u1)
-      uu[i,j] = np.mean(prod,axis=1)/(np.sqrt(np.mean(u0*u0,axis=1))*np.sqrt(np.mean(u1*u1,axis=1)))
-      # Calculate uv
-      u1 = data[np.where(data[:,0]==pair),2]; u1 = u1-np.mean(u1,axis=1);
-      prod = np.multiply(u0,u1)
-      uv[i,j] = np.mean(prod,axis=1)/(np.sqrt(np.mean(u0*u0,axis=1))*np.sqrt(np.mean(u1*u1,axis=1)))
-      # Calculate pp
-      u1 = data[np.where(data[:,0]==pair),3]; u1 = u1-np.mean(u1,axis=1);
-      prod = np.multiply(p0,u1)
-      pp[i,j] = np.mean(prod,axis=1)/(np.sqrt(np.mean(p0*p0,axis=1))*np.sqrt(np.mean(u1*u1,axis=1)))
-      # Calculate up
-      u1 = data[np.where(data[:,0]==pair),3]; u1 = u1-np.mean(u1,axis=1);
-      prod = np.multiply(u0,u1)
-      up[i,j] = np.mean(prod,axis=1)/(np.sqrt(np.mean(u0*u0,axis=1))*np.sqrt(np.mean(u1*u1,axis=1)))
+      uu[i,j] = np.mean(prod)/(np.sqrt(np.mean(u0*u0))*np.sqrt(np.mean(u1*u1)))
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
 
     print('--|| ALYA :: PLOTTING RESULTS.')
@@ -394,58 +394,6 @@ else:
     #plt.yticks([0,0.5,1])
     axs.set(xlim=(0, 0.1))
     
-    #axs = plt.subplot(grid[1, 0:]);
-    #for i in indPLabel:
-    #  lab = r"$P_{"+str(i)+"}$";
-    #  l2, = plt.plot(z,uv[:,i],'k'+ls[i],linewidth=lw,label=lab)
-    #plt.xlabel(r'$z/c$');
-    #plt.ylabel(r'$\mathcal{R}_{u \prime v\prime}$')
-    #plt.xticks([0,0.05,0.1])
-    #axs.set(xlim=(0, 0.1))
-    #  #plt.yticks([-1,0,1])
-    #
-    #axs = plt.subplot(grid[2, 0:]);
-    #for i in indPLabel:
-    #  lab = r"$P_{"+str(i)+"}$";
-    #  l3, = plt.plot(z,pp[:,i],'k'+ls[i],linewidth=lw,label=lab)
-    #plt.xlabel(r'$z/c$');
-    #plt.ylabel(r'$\mathcal{R}_{p\prime p\prime}$')
-    #axs.set(xlim=(0, 0.1))
-    #plt.xticks([0,0.05,0.1])
-    #  #plt.yticks([0,0.5,1])
-    #
-    #axs = plt.subplot(grid[3, 0:]);
-    #for i in indPLabel:
-    #  lab = r"$P_{"+str(i)+"}$";
-    #  l4, = plt.plot(z,up[:,i],'k'+ls[i],linewidth=lw,label=lab)
-    #plt.xlabel(r'$z/c$');
-    #plt.ylabel(r'$\mathcal{R}_{u\prime p \prime}$')
-    #axs.set(xlim=(0, 0.1))
-    #plt.xticks([0,0.05,0.1])
-      #plt.yticks([0,0.5,1])
-    handles, labels = axs.get_legend_handles_labels()  
-    #frame1 = plt.gca()
-    
-    #axs = plt.subplot(grid[1, 0:]);
-    #plt.plot(coordAirU[:,0],coordAirU[:,1],'r',linewidth=2)
-    #plt.plot(coordAirL[:,0],coordAirL[:,1],'r',linewidth=2)
-    #leg = []
-    #for i,n in enumerate(indP):
-    # lab = r'$P_{'+str(i)+'}$';
-    # print("--|| ALYA :: PROCESSING POINT",lab);
-    # leg.append(lab)
-    # plt.plot(witPoints[n,0], witPoints[n,1],'ko',linewidth=1)
-    # plt.text(witPoints[n,0], witPoints[n,1]+0.025, lab, fontsize=SMALL_SIZE)
-    #axs.set_anchor('W')
-    #plt.xlabel(r'$x/c$');
-    #plt.yticks([])
-    #plt.xticks([0,0.5,1,1.3])
-    #axs.set_aspect(1.5);
-    #axs.set(xlim=(-0.001, 1.3))
-    axs.spines['top'].set_visible(False)
-    axs.spines['right'].set_visible(False)
-    ##axs.spines['bottom'].set_visible(False)
-    #axs.spines['left'].set_visible(False)
     plt.tick_params(
         axis='y',          # changes apply to the x-axis
         which='both',      # both major and minor ticks are affected
@@ -453,14 +401,14 @@ else:
         right=False,         # ticks along the top edge are off
         labelleft=True,
         labelright=False) # labels along the bottom edge are off
-    fig.legend(handles,     # The line objects
-               labels,
-               loc="upper right",   # Position of legend	i
+    axs.legend(loc="upper right",   # Position of legend	i
                bbox_to_anchor=(0.92,0.92),
                ncol = 2, fancybox=True
               )
 #plt.show()
 savePath = casePath+'/plot_'+mode.lower()+'_'
+if('TPCORR' in mode):
+  savePath = savePath+calcVar.lower()+'_'
 savePath = savePath+airfoil
 savePath = savePath+'.png'
 print('----|| INFO :: SAVING FIGURE AS ',savePath)
