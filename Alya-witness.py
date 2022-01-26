@@ -193,8 +193,8 @@ if("SHOWPTS" in mode):
 else:  
   
   if(any(string in mode for string in ["PSD","THIS"])):
-    calcVar = 'U'
-    print('--|| INFO :: TWO-POINT CORRELATION ON %s'% calcVar)
+    calcVar = 'V'
+    print('--|| INFO :: PSD CALCULATIONS ON %s'% calcVar)
     print('--|| ALYA :: READING WITNESS DATA.')
     stime = time.time()
     if('U' in calcVar):
@@ -222,7 +222,8 @@ else:
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
     for (i,j) in enumerate(indP):
       print('----|| INFO :: PROCESSING POINT %d, x,y,z='%j, witPoints[j,:])
-      lab = r'$P_{'+str(j+1)+'}$';
+      #lab = r'$P_{'+str(j+1)+'}$';
+      lab = r'$x/c=%.1f, \, y/c=%.2f$'%(witPoints[j,0],witPoints[j,1]);
       if('ZAVG' in mode):
         print('----|| INFO :: PERFORMING SPANWISE AVERAGING')
         z_per_index = np.arange(j,nWit,nz)
@@ -234,7 +235,8 @@ else:
       print('----|| INFO :: UNIQUE WITNESS ARRAY SIZE=',np.shape(dataPoint))
       tSignal = t;
       ySignal = dataPoint-np.mean(dataPoint,axis=None)
-      ax = plt.subplot(len(indP), 1, i+1)
+      #ax = plt.subplot(len(indP), 1, i+1)
+      ax = plt.subplot(1, 1, 1)
       if("THIS" in mode):
         print('--|| ALYA :: CALCULATE TIME HISTORY (THIS).')
         N = 1000;
@@ -279,17 +281,25 @@ else:
           #ax.set(xlim=(0, 10))
         else:
           raise ValueError('ALYA ERROR :: METHOD TO CALC PSD NOT SPECIFIED!')
-        plt.plot(f, pgram, 'k',markevery=markFreq,linewidth=0.5,label=lab)
-        plt.ylabel(r'$E_{u^\prime u^\prime}$')
+        pgram = 10**i*(pgram/np.amax(pgram,axis=None))
+        plt.plot(f, pgram, markevery=markFreq,linewidth=0.5,label=lab)
+        if('U' in calcVar):
+          plt.ylabel(r'$E_{u^\prime u^\prime}$')
+        elif('V' in calcVar):
+          plt.ylabel(r'$E_{v^\prime v^\prime}$')
+        elif('W' in calcVar):
+          plt.ylabel(r'$E_{w^\prime w^\prime}$')
+        elif('P' in calcVar):
+          plt.ylabel(r'$E_{p^\prime p^\prime}$')
         plt.yscale("log")
         plt.xscale("log")
-        #ax.set(xlim=(np.amin(f), np.amax(f)))
-        plt.gca().set_xlim(right=1000);
-        ax.annotate(lab, xy=(0.05, 1.1), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
-                        horizontalalignment='left', verticalalignment='top')
-        #ax.legend()
+        ax.set(xlim=(np.amin(f), 1000))
+        #plt.gca().set_xlim(right=1000);
+        #ax.annotate(lab, xy=(0.05, 1.1), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
+        #                horizontalalignment='left', verticalalignment='top')
+        ax.legend()
         if(i==0):
-         plt.plot(f[np.where(f>100)],10000.0*np.power(f[np.where(f>100)],-5.0/3),'b--')
+         plt.plot(f[np.where(f>100)],10.0*np.power(f[np.where(f>100)],-5.0/3),'k--')
         elif(i==len(indP)-1):
          plt.xlabel(r'$fc/U_o$');
       else:
