@@ -14,18 +14,18 @@ from scipy.interpolate import interp1d
 #######################################################################
 def calcSpectra(f, nWindows, iPeriodic):
   n = len(f)
-  n = n/nWindows
+  n = n//nWindows
   print('--|| FFT INFO : WINDOW SIGNAL LENGTH={}'.format(n))
   
   wss = 0.
   if iPeriodic:
-    print('no window')
+    print('--||INFO :: SIGNAL PERIODIC, NO WINDOWING')
   else:
     wss = sum(np.hanning(n))
   
   for iWindow in range(0, nWindows, 1):
-    print('data window: {}'.format(iWindow))
-    print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
+    #print('data window: {}'.format(iWindow))
+    #print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
     fx = f[iWindow*n:(iWindow+1)*n]
   
     if iPeriodic:
@@ -36,11 +36,11 @@ def calcSpectra(f, nWindows, iPeriodic):
     
     if (n % 2) == 0:
       #Mind the odd-ball wavenumber, not considered here
-      afk = 2*(np.abs(fk[0:(n/2+1)])/n)
-      pfk = 2*(np.abs(fk[0:(n/2+1)])/n)**2
+      afk = 2*(np.abs(fk[0:(n//2+1)])/n)
+      pfk = 2*(np.abs(fk[0:(n//2+1)])/n)**2
     else:
-      afk = 2*(np.abs(fk[0:((n-1)/2+1)])/n)
-      pfk = 2*(np.abs(fk[0:((n-1)/2+1)])/n)**2
+      afk = 2*(np.abs(fk[0:((n-1)//2+1)])/n)
+      pfk = 2*(np.abs(fk[0:((n-1)//2+1)])/n)**2
   
     if iWindow==0:
       afks = afk
@@ -94,7 +94,7 @@ indP = [6,7]
 #indP = [22,23]
 #indP = [5,6,7,8,9]
 #indP = [2,3,4,5,6,7,8,9,10,11]
-#indP = [24,25,26,27,28,29]
+#indP = (np.arange(23,30)-1)
 #indP = [28,29]
 
 # LOAD AIRFOIL SPECIFIC FILES
@@ -133,7 +133,7 @@ print('--|| ALYA :: DONE. TIME=',time.time()-stime)
 
 nWit = len(witPoints)
 z = np.unique(witPoints[:,2]);
-nz = nWit/len(z)
+nz = int(nWit/len(z))
 indPLabel = range(len(indP));
 print('--|| ALYA :: PROCESSING', nWit, 'TOTAL WITNESS POINTS')
 print('--|| ALYA :: NUMBER OF WIT POINTS IN A PLANE ',nz,'WITH',len(z),'PLANES')
@@ -193,6 +193,8 @@ if("SHOWPTS" in mode):
 else:  
   
   if(any(string in mode for string in ["PSD","THIS"])):
+    calcVar = 'U'
+    print('--|| INFO :: TWO-POINT CORRELATION ON %s'% calcVar)
     print('--|| ALYA :: READING WITNESS DATA.')
     stime = time.time()
     if('U' in calcVar):
@@ -221,7 +223,12 @@ else:
     for (i,j) in enumerate(indP):
       print('----|| INFO :: PROCESSING POINT %d, x,y,z='%j, witPoints[j,:])
       lab = r'$P_{'+str(j+1)+'}$';
-      dataPoint = wit_data[:,j]; #Extract data
+      if('ZAVG' in mode):
+        print('----|| INFO :: PERFORMING SPANWISE AVERAGING')
+        z_per_index = np.arange(j,nWit,nz)
+        dataPoint = np.mean(wit_data[:,z_per_index],axis=1)
+      else:
+        dataPoint = wit_data[:,j]; #Extract data
       print('----|| INFO :: WITNESS ARRAY SIZE=',np.shape(dataPoint))
       dataPoint = dataPoint[ind];
       print('----|| INFO :: UNIQUE WITNESS ARRAY SIZE=',np.shape(dataPoint))
@@ -230,8 +237,8 @@ else:
       ax = plt.subplot(len(indP), 1, i+1)
       if("THIS" in mode):
         print('--|| ALYA :: CALCULATE TIME HISTORY (THIS).')
-	N = 1000;
-	y1 = dataPoint - np.convolve(dataPoint, np.ones(N)/N, mode='same')
+        N = 1000;
+        y1 = dataPoint - np.convolve(dataPoint, np.ones(N)/N, mode='same')
 
         plt.plot(tSignal, dataPoint, 'k',markevery=markFreq,linewidth=0.5,label=lab)
         #plt.plot(t, y1, 'r--',markevery=markFreq,linewidth=0.5,label=lab)
@@ -239,8 +246,8 @@ else:
                         horizontalalignment='left', verticalalignment='top')
         if(i==len(indP)-1):
          plt.xlabel(r'$tU_o/c$');
-	 #ylab = r'$\left(u-\overline{U}\right)/U_o$'
-	 ylab = r'$u/U_o$'
+         #ylab = r'$\left(u-\overline{U}\right)/U_o$'
+         ylab = r'$u/U_o$'
          ax.annotate(ylab, xy=(0.02, 0.55),xycoords='figure fraction',fontsize=MEDIUM_SIZE,rotation=90)
       elif("PSD" in mode):
         print('--|| ALYA :: CALCULATE POWER SPECTRA (PSD).')
@@ -263,7 +270,7 @@ else:
           amp,pgram = calcSpectra(ySignal, 10, 0)
           #pgram = np.fft.fft(ySignal)
           N = len(pgram); print('--|| INFO :: FFT LENGTH = %d'%N) 
-          n = np.arange(N)/2; 
+          n = np.arange(N); 
           T = float(N)/s_rate; 
           f = n/T
           #plt.stem(f, np.abs(pgram), 'b', \
@@ -276,7 +283,8 @@ else:
         plt.ylabel(r'$E_{u^\prime u^\prime}$')
         plt.yscale("log")
         plt.xscale("log")
-        ax.set(xlim=(np.amin(f), np.amax(f)))
+        #ax.set(xlim=(np.amin(f), np.amax(f)))
+        plt.gca().set_xlim(right=1000);
         ax.annotate(lab, xy=(0.05, 1.1), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
                         horizontalalignment='left', verticalalignment='top')
         #ax.legend()
@@ -330,8 +338,6 @@ else:
 	right=False)         # ticks along the top edge are off
 
       # plt.locator_params(axis='y', nbins=3)
-
-    plt.show()
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
 
      
@@ -407,7 +413,11 @@ else:
               )
 #plt.show()
 savePath = casePath+'/plot_'+mode.lower()+'_'
-if('TPCORR' in mode):
+if('PSD' in mode):
+  listP = [str(pt) for pt in indP]
+  listStr = "_".join(listP)
+  savePath = savePath+listStr+'_'
+elif('TPCORR' in mode):
   savePath = savePath+calcVar.lower()+'_'
 savePath = savePath+airfoil
 savePath = savePath+'.png'
