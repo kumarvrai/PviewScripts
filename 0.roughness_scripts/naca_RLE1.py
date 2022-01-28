@@ -77,7 +77,7 @@ def genSphereLoc(xMin,xMax,zMin,zMax,delx,delz,h):
 
 ###########################################
 fileType = sys.argv[1]
-RGH_SCRPTS='/home/kvishal/1.post_process/0.alya_pv_scripts/0.roughness_scripts/'
+RGH_SCRPTS='/home/kvishal/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
 if fileType == 'GMSH':
    geofile_in = 'naca.msh'
    geofile_out= 'naca_r.msh'
