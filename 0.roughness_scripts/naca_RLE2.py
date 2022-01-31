@@ -151,7 +151,7 @@ for i in range(0,len(Xpos)):
   if(Xpos[i]<0.01 or Xpos[i]>=0.1):
      Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(4,8))
   else:
-     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(8,12))
+     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(12,16))
   for k in range(0,len(Zpos)):
     if(Zpos[k]<=(np.amin(Zpos,axis=None)) or Zpos[k]>=(np.amax(Zpos,axis=None))):
        xLoc = Xpos[i]
@@ -167,7 +167,7 @@ for i in range(1,len(Xpos)):
   if(Xpos[i]<0.01 or Xpos[i]>=0.1):
      Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(4,8))
   else:
-     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(8,12))
+     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(12,16))
   for k in range(0,len(Zpos)):
     if(Zpos[k]<=(np.amin(Zpos,axis=None)) or Zpos[k]>=(np.amax(Zpos,axis=None))):
        xLoc = Xpos[i]
@@ -296,7 +296,7 @@ for line in f:
                         fact_z = (abs(z-zc0)/rSphere)
 
                         hy_new = m.exp(-fact*inloc**2)*hy_sphere + (1.0-m.exp(-fact*inloc**2))*hy
-                        #hy_new = m.exp(-fact_z)*hy_new + (1.0-m.exp(-fact_z))*hy
+                        hy_new = m.exp(-fact_z)*hy_new + (1.0-m.exp(-fact_z))*hy
 
                         hy = ((H-hy)/H)*hy_new + (1.0 - (H-hy)/H)*hy
 

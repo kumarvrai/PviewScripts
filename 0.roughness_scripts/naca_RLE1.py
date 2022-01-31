@@ -43,8 +43,8 @@ def wrap_cyl(r, theta,xc0, yc0):
     return x, y
 
 def genSphereLoc(xMin,xMax,zMin,zMax,delx,delz,h):
-    airCoordU = RGH_SCRPTS+'input_files/naca4412-UP.txt'
-    airCoordD = RGH_SCRPTS+'input_files/naca4412-DOWN.txt'
+    airCoordU = RGH_SCRPTS+'/naca4412-UP.txt'
+    airCoordD = RGH_SCRPTS+'/naca4412-DOWN.txt'
     aircup = np.loadtxt(airCoordU)
     aircdo = np.flip(np.loadtxt(airCoordD),axis=0)
     # Upper Surface
@@ -88,8 +88,8 @@ elif fileType == 'ALYA':
    geofile_out= 'naca_r.geo.dat'
    bString = 'COORDINATES'
    eString = 'END_COORDINATES'
-airfoilCoord = RGH_SCRPTS+'/input_files/naca4412.txt'
-expDistRough = RGH_SCRPTS+'/input_files/expDistRough.txt'
+airfoilCoord = RGH_SCRPTS+'/naca4412.txt'
+expDistRough = RGH_SCRPTS+'/expDistRough.txt'
 
 f = open(geofile_in, 'r')
 g = open(geofile_out, 'w')
