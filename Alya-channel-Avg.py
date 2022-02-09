@@ -117,7 +117,7 @@ if('OFOAM' in codeName):
     """
     import numpy as np
     varNames0 = ['P','U']
-    varNames1 = ['PRESS','VELOC']
+    varNames1 = ['AVPRE','AVVEL']
     for (i,var) in enumerate(varNames0):
      outName = varNames1[i]
      avg = (inputs[0].PointData[var])
@@ -168,7 +168,7 @@ case.Script = \
 """
 import numpy as np
 varNames = inputs[0].PointData.keys()
-#print("----|| Alya :: ALL 3D ARRAYS --> ",varNames)
+print("----|| Alya :: ALL 3D ARRAYS --> ",varNames)
 for var in varNames:
  outName = str(var[0:5])
  avg = (inputs[0].PointData[var])
