@@ -106,7 +106,7 @@ if('OFOAM' in codeName):
   
   case = OpenDataFile(fileName)
   if('INS' in fileType):
-    case.PointArrays = ['P','U']
+    case.PointArrays = ['p','U']
     if('PAR' in fileType):
       case.caseType = ['Decomposed Case']
     case.UpdatePipeline()
@@ -116,7 +116,7 @@ if('OFOAM' in codeName):
     case.Script = \
     """
     import numpy as np
-    varNames0 = ['P','U']
+    varNames0 = ['p','U']
     varNames1 = ['AVPRE','AVVEL']
     for (i,var) in enumerate(varNames0):
      outName = varNames1[i]
@@ -158,7 +158,7 @@ case.ComputeMinimum = 0
 case.ComputeMaximum = 0
 case.ComputeStandardDeviation = 0
 case.UpdatePipeline()
-
+print(case.PointArrays)
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 ## create a new 'Programmable Filter and change names'
 print("--|| NEK: CHANGING VARIABLE NAMES.")
