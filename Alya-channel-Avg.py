@@ -124,6 +124,7 @@ if('OFOAM' in codeName):
      output.PointData.append(avg,outName)
     """
     case.UpdatePipeline()
+    print(case.PointData.keys())
     print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
   elif('AVG' in fileType):
     case.PointArrays = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
@@ -158,7 +159,6 @@ case.ComputeMinimum = 0
 case.ComputeMaximum = 0
 case.ComputeStandardDeviation = 0
 case.UpdatePipeline()
-print(case.PointData.keys())
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 ## create a new 'Programmable Filter and change names'
 print("--|| NEK: CHANGING VARIABLE NAMES.")
