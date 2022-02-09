@@ -158,7 +158,7 @@ case.ComputeMinimum = 0
 case.ComputeMaximum = 0
 case.ComputeStandardDeviation = 0
 case.UpdatePipeline()
-print(case.PointArrays)
+print(case.PointData.keys())
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 ## create a new 'Programmable Filter and change names'
 print("--|| NEK: CHANGING VARIABLE NAMES.")
