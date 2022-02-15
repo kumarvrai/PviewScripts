@@ -13,10 +13,10 @@ from paraview.simple import *
 
 
 caseName	= sys.argv[1]
-model		= sys.argv[2]
-nu		= float(sys.argv[3])
-dim		= sys.argv[4]
-geom		= sys.argv[5]
+codeName	= sys.argv[2]
+fileType	= sys.argv[3]
+avgDim		= sys.argv[4]
+geomType	= sys.argv[5]
 
 zDec = 6; xDec = 6
 casePath = os.getcwd()
@@ -24,81 +24,133 @@ casePath = os.getcwd()
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
-print("--|| NEK :: READING NEK5000 ARRAYS")
-startTime = time.time()
+if('NEK' in codeName):
+  print("--|| NEK :: READING NEK5000 ARRAYS")
+  startTime = time.time()
+  
+  fileName1 = 'avg'+caseName+'.nek5000'
+  fileName2 = 'rms'+caseName+'.nek5000'
+  fileName3 = 'rm2'+caseName+'.nek5000'
+  
+  case1 = OpenDataFile(fileName1)
+  case1.PointArrays = ['velocity','pressure']
+  case1.UpdatePipeline()
+  
+  ## create a new 'Programmable Filter and change names'
+  print("--|| NEK: CHANGING VARNAMES 1 USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  case1 = ProgrammableFilter(Input=case1)
+  case1.Script = \
+  """
+  import numpy as np
+  varNames0 = ['velocity','pressure']
+  varNames1 = ['AVVEL','AVPRE']
+  for (i,var) in enumerate(varNames0):
+   outName = varNames1[i]
+   avg = (inputs[0].PointData[var])
+   output.PointData.append(avg,outName)
+  """
+  case1.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  case2 = OpenDataFile(fileName2)
+  case2.PointArrays = ['velocity','pressure']
+  case2.UpdatePipeline()
+  
+  ## create a new 'Programmable Filter and change names'
+  print("--|| NEK: CHANGING VARNAMES 2 USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  case2 = ProgrammableFilter(Input=case2)
+  case2.Script = \
+  """
+  import numpy as np
+  varNames0 = ['velocity','pressure']
+  varNames1 = ['AVVE2','AVPR2']
+  for (i,var) in enumerate(varNames0):
+   outName = varNames1[i]
+   avg = (inputs[0].PointData[var])
+   output.PointData.append(avg,outName)
+  """
+  case2.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  case3 = OpenDataFile(fileName3)
+  case3.PointArrays = ['velocity']
+  case3.UpdatePipeline()
+  
+  ## create a new 'Programmable Filter and change names'
+  print("--|| NEK: CHANGING VARNAMES 3 USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  case3 = ProgrammableFilter(Input=case3)
+  case3.Script = \
+  """
+  import numpy as np
+  varNames0 = ['velocity']
+  varNames1 = ['AVVXY']
+  for (i,var) in enumerate(varNames0):
+   outName = varNames1[i]
+   avg = (inputs[0].PointData[var])
+   output.PointData.append(avg,outName)
+  """
+  case3.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  print("--|| NEK: APPEND DATASETS")
+  startTime = time.time()
+  case = AppendAttributes(Input=[case1,case2,case3])
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
-fileName1 = 'avg'+caseName+'.nek5000'
-fileName2 = 'rms'+caseName+'.nek5000'
-fileName3 = 'rm2'+caseName+'.nek5000'
+if('OFOAM' in codeName):
+  print("--|| OFOAM :: READING OPENFOAM ARRAYS")
+  startTime = time.time()
+  
+  fileName = caseName+'.foam'
+  
+  case = OpenDataFile(fileName)
+  if('INS' in fileType):
+    case.PointArrays = ['p','U']
+    if('PAR' in fileType):
+      case.caseType = ['Decomposed Case']
+    case.UpdatePipeline()
+    print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+    startTime = time.time()
+    case = ProgrammableFilter(Input=case)
+    case.Script = \
+    """
+    import numpy as np
+    varNames0 = ['p','U']
+    varNames1 = ['AVPRE','AVVEL']
+    for (i,var) in enumerate(varNames0):
+     outName = varNames1[i]
+     avg = (inputs[0].PointData[var])
+     output.PointData.append(avg,outName)
+    """
+    case.UpdatePipeline()
+    print(case.PointData.keys())
+    print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  elif('AVG' in fileType):
+    case.PointArrays = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
+    if('PAR' in fileType):
+      case.caseType = ['Decomposed Case']
+    case.UpdatePipeline()
+    print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+    startTime = time.time()
+    case = ProgrammableFilter(Input=case)
+    case.Script = \
+    """
+    import numpy as np
+    varNames0 = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
+    varNames1 = ['AVPRE','AVVEL','AVPR2','RESTR']
+    for (i,var) in enumerate(varNames0):
+     outName = varNames1[i]
+     avg = (inputs[0].PointData[var])
+     output.PointData.append(avg,outName)
+    """
+    case.UpdatePipeline()
+    print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  else:
+    raise ValueError('--|| ALYA ERROR :: FILETYPE NOT RECONIZED.')
+  case.UpdatePipeline()
 
-case1 = OpenDataFile(fileName1)
-case1.PointArrays = ['velocity','pressure']
-case1.UpdatePipeline()
-
-## create a new 'Programmable Filter and change names'
-print("--|| NEK: CHANGING VARNAMES 1 USING A PROGRAMMABLE FILTER")
-startTime = time.time()
-case1 = ProgrammableFilter(Input=case1)
-case1.Script = \
-"""
-import numpy as np
-varNames0 = ['velocity','pressure']
-varNames1 = ['AVVEL','AVPRE']
-for (i,var) in enumerate(varNames0):
- outName = varNames1[i]
- avg = (inputs[0].PointData[var])
- output.PointData.append(avg,outName)
-"""
-case1.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
-case2 = OpenDataFile(fileName2)
-case2.PointArrays = ['velocity','pressure']
-case2.UpdatePipeline()
-
-## create a new 'Programmable Filter and change names'
-print("--|| NEK: CHANGING VARNAMES 2 USING A PROGRAMMABLE FILTER")
-startTime = time.time()
-case2 = ProgrammableFilter(Input=case2)
-case2.Script = \
-"""
-import numpy as np
-varNames0 = ['velocity','pressure']
-varNames1 = ['AVVE2','AVPR2']
-for (i,var) in enumerate(varNames0):
- outName = varNames1[i]
- avg = (inputs[0].PointData[var])
- output.PointData.append(avg,outName)
-"""
-case2.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
-case3 = OpenDataFile(fileName3)
-case3.PointArrays = ['velocity']
-case3.UpdatePipeline()
-
-## create a new 'Programmable Filter and change names'
-print("--|| NEK: CHANGING VARNAMES 3 USING A PROGRAMMABLE FILTER")
-startTime = time.time()
-case3 = ProgrammableFilter(Input=case3)
-case3.Script = \
-"""
-import numpy as np
-varNames0 = ['velocity']
-varNames1 = ['AVVXY']
-for (i,var) in enumerate(varNames0):
- outName = varNames1[i]
- avg = (inputs[0].PointData[var])
- output.PointData.append(avg,outName)
-"""
-case3.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
-print("--|| NEK: APPEND DATASETS")
-startTime = time.time()
-case = AppendAttributes(Input=[case1,case2,case3])
-case.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
-
-
-print("--|| NEK :: TEMPORAL AVERAGING  NEK-AVERAGED ARRAYS")
+print("--|| NEK :: TEMPORAL AVERAGING.")
 startTime = time.time()
 case = TemporalStatistics(Input=case)
 
@@ -107,10 +159,9 @@ case.ComputeMinimum = 0
 case.ComputeMaximum = 0
 case.ComputeStandardDeviation = 0
 case.UpdatePipeline()
-
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 ## create a new 'Programmable Filter and change names'
-print("--|| NEK: CHANGING VARIABLE NAMES USING A PROGRAMMABLE FILTER")
+print("--|| NEK: CHANGING VARIABLE NAMES.")
 startTime = time.time()
 case = ProgrammableFilter(Input=case)
 case.Script = \
@@ -132,66 +183,67 @@ print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 caseVarNames = case.PointData.keys()
 indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
 indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
-indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
-indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
-print("--|| NEK :: CALCULATING R-STRESSES")
-startTime = time.time()
-# CALCULATE RStresses
-CAL1 = Calculator(Input=case)
-CAL1.ResultArrayName = "RS_II"
-CAL1.Function = "%s - %s_%s*%s_%s*iHat - %s_%s*%s_%s*jHat - %s_%s*%s_%s*kHat" \
-                % (caseVarNames[indXX],caseVarNames[indU],'X',caseVarNames[indU],'X',\
-                  caseVarNames[indU],'Y',caseVarNames[indU],'Y',\
-                 caseVarNames[indU],'Z',caseVarNames[indU],'Z')
-CAL1.UpdatePipeline() 
-CAL1 = Calculator(Input=CAL1)
-CAL1.ResultArrayName = "RS_IJ"
-CAL1.Function = "%s - %s_%s*%s_%s*iHat - %s_%s*%s_%s*jHat - %s_%s*%s_%s*kHat" \
-                % (caseVarNames[indXY],caseVarNames[indU],'X',caseVarNames[indU],'Y',\
-                  caseVarNames[indU],'Y',caseVarNames[indU],'Z',\
-                  caseVarNames[indU],'X',caseVarNames[indU],'Z')
-CAL1.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+if('NEK' in codeName):
+  indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
+  indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
+  print("--|| NEK :: CALCULATING R-STRESSES")
+  startTime = time.time()
+  # CALCULATE RStresses
+  case = Calculator(Input=case)
+  case.ResultArrayName = "RS_II"
+  case.Function = "%s - %s_%s*%s_%s*iHat - %s_%s*%s_%s*jHat - %s_%s*%s_%s*kHat" \
+                  % (caseVarNames[indXX],caseVarNames[indU],'X',caseVarNames[indU],'X',\
+                    caseVarNames[indU],'Y',caseVarNames[indU],'Y',\
+                   caseVarNames[indU],'Z',caseVarNames[indU],'Z')
+  case.UpdatePipeline() 
+  case = Calculator(Input=case)
+  case.ResultArrayName = "RS_IJ"
+  case.Function = "%s - %s_%s*%s_%s*iHat - %s_%s*%s_%s*jHat - %s_%s*%s_%s*kHat" \
+                  % (caseVarNames[indXY],caseVarNames[indU],'X',caseVarNames[indU],'Y',\
+                    caseVarNames[indU],'Y',caseVarNames[indU],'Z',\
+                    caseVarNames[indU],'X',caseVarNames[indU],'Z')
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 # GRADIENT CALC
 print("--|| NEK :: CALCULATING PRESS GRADIENT")
 startTime = time.time()
-CAL1 = GradientOfUnstructuredDataSet(Input=CAL1)
-CAL1.ScalarArray = ['POINTS', caseVarNames[indP]]
-CAL1.ComputeGradient = 1
-CAL1.ResultArrayName = 'AVPGR'
-CAL1.ComputeVorticity = 0
-CAL1.VorticityArrayName = 'OMEGA'
-CAL1.ComputeQCriterion = 0
-CAL1.QCriterionArrayName = 'QCRIT'
-CAL1.UpdatePipeline()
+case = GradientOfUnstructuredDataSet(Input=case)
+case.ScalarArray = ['POINTS', caseVarNames[indP]]
+case.ComputeGradient = 1
+case.ResultArrayName = 'AVPGR'
+case.ComputeVorticity = 0
+case.VorticityArrayName = 'OMEGA'
+case.ComputeQCriterion = 0
+case.QCriterionArrayName = 'QCRIT'
+case.UpdatePipeline()
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
 print("--|| NEK :: CALCULATING AVVEL GRADIENT, Q AND VORTICITY")
 startTime = time.time()
-CAL1 = GradientOfUnstructuredDataSet(Input=CAL1)
-CAL1.ScalarArray = ['POINTS', caseVarNames[indU]]
-CAL1.ComputeGradient = 1
-CAL1.ResultArrayName = 'AVVGR'
-CAL1.ComputeVorticity = 1
-CAL1.VorticityArrayName = 'OMEGA'
-CAL1.ComputeQCriterion = 1
-CAL1.QCriterionArrayName = 'QCRIT'
-CAL1.UpdatePipeline()
+case = GradientOfUnstructuredDataSet(Input=case)
+case.ScalarArray = ['POINTS', caseVarNames[indU]]
+case.ComputeGradient = 1
+case.ResultArrayName = 'AVVGR'
+case.ComputeVorticity = 1
+case.VorticityArrayName = 'OMEGA'
+case.ComputeQCriterion = 1
+case.QCriterionArrayName = 'QCRIT'
+case.UpdatePipeline()
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 ## CALCULATE LAMBDA2
 #print("--|| NEK :: CALCULATING LAMBDA")
 #startTime = time.time()
-#CAL1 = PythonCalculator(Input=CAL1)
-#CAL1.ArrayName = "LAMDA"
-#CAL1.Expression = "eigenvalue(strain(%s)**2 + (AVVGR - strain(%s))**2)"% (caseVarNames[indU],caseVarNames[indU])
-#CAL1.UpdatePipeline()
+#case = PythonCalculator(Input=case)
+#case.ArrayName = "LAMDA"
+#case.Expression = "eigenvalue(strain(%s)**2 + (AVVGR - strain(%s))**2)"% (caseVarNames[indU],caseVarNames[indU])
+#case.UpdatePipeline()
 #print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
 ########### 3D STATISTICS ###################
-if('3D' in dim):
+if('3D' in avgDim):
  # Save a 3D time averaged file
  savePath = casePath+"/AvgData_3D.vtm"
- SaveData(savePath, proxy=CAL1)
+ SaveData(savePath, proxy=case)
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
 ################################################ 
 
@@ -200,9 +252,9 @@ startTime = time.time()
 
 (xmin,xmax,ymin,ymax,zmin,zmax) =  case.GetDataInformation().GetBounds()
 
-if("DFUSER" in geom):
+if("DFUSER" in geomType):
   
-  slice1 = Slice(Input=CAL1)
+  slice1 = Slice(Input=case)
   slice1.SliceType = 'Plane'
   slice1.SliceOffsetValues = [0.0]
   ## init the 'Plane' selected for 'SliceType'
@@ -229,7 +281,7 @@ if("DFUSER" in geom):
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 else:
-  slice1 = Slice(Input=CAL1)
+  slice1 = Slice(Input=case)
   slice1.SliceType = 'Plane'
   slice1.SliceOffsetValues = [0.0]
   slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
@@ -257,12 +309,14 @@ for i in range(N):
 	# create a new 'Transform'
 	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
 	# Properties modified on transform1.Transform
-	if("DFUSER" in geom):
+	if("DFUSER" in geomType):
 	  transform1.Transform.Rotate = [0.0, 0.0, zpos[i]-thMid]
 	else:
 	  transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
-	#resampleWithDataset1 = ResampleWithDataset(Input=CAL1,Source=transform1)
-	resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=CAL1,DestinationMesh=transform1)
+	try:  
+	 resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
+	except: 
+	 resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1)
 	resample_transforms.append(resampleWithDataset1)
 print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
 HideAll()
@@ -299,8 +353,8 @@ for varName in varFull:
 PF1.UpdatePipeline()
 print("--|| NEK: SPANWISE AVERAGING DONE. TIME =",time.time()-startTime,'sec')
 
-if('2D' in dim):
-  #if("DFUSER" in geom):
+if('2D' in avgDim):
+  #if("DFUSER" in geomType):
   #  # Convert the plane (x,y,z) to (z,r,th) plane
   #  PF1 = Calculator(Input=PF1)
   #  PF1.ResultArrayName = "result"
@@ -314,7 +368,7 @@ if('2D' in dim):
   print("----|| NEK: 2D STATISTICS FILE WRITTEN AS: ",savePath)
 
   ########### STREAMWISE AVERAGING ################
-if('1D' in dim):
+if('1D' in avgDim):
   print("--|| ALYA :: GENERATING SLICE FOR STREAMWISE AVERAGE")
   slice1 = Slice(Input=PF1)
   slice1.SliceType = 'Plane'
@@ -322,7 +376,7 @@ if('1D' in dim):
   ## init the 'Plane' selected for 'SliceType'
   slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
   ## Properties modified on slice1.SliceType
-  if("DFUSER" in geom):
+  if("DFUSER" in geomType):
     slice1.SliceType.Normal = [0.0, 0.0, 1.0]
   else:
     slice1.SliceType.Normal = [1.0, 0.0, 0.0]
@@ -332,7 +386,7 @@ if('1D' in dim):
   print("----|| ALYA :: WORKING WITH ",Ny," PLANAR POINTS")
 
   N = int(Nplane/Ny)
-  if("DFUSER" in geom):
+  if("DFUSER" in geomType):
     xmid = (zmin+zmax)/2
     xpos = np.around(np.asarray(np.arange(N)*(zmax-zmin)/(N-1),dtype=np.double),decimals=zDec)
   else:  
@@ -351,7 +405,7 @@ if('1D' in dim):
   	# create a new 'Transform'
   	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
   	# Properties modified on transform1.Transform
-  	if("DFUSER" in geom):
+  	if("DFUSER" in geomType):
   	  transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
   	else:  
   	  transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]  
