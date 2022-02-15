@@ -151,7 +151,7 @@ for i in range(0,len(Xpos)):
   if(Xpos[i]<0.01 or Xpos[i]>=0.1):
      Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(4,8))
   else:
-     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(12,16))
+     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(8,12))
   for k in range(0,len(Zpos)):
     if(Zpos[k]<=(np.amin(Zpos,axis=None)) or Zpos[k]>=(np.amax(Zpos,axis=None))):
        xLoc = Xpos[i]
@@ -167,7 +167,7 @@ for i in range(1,len(Xpos)):
   if(Xpos[i]<0.01 or Xpos[i]>=0.1):
      Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(4,8))
   else:
-     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(12,16))
+     Zpos = np.linspace(z_min, z_max, z_dom_fac*rand.randint(8,12))
   for k in range(0,len(Zpos)):
     if(Zpos[k]<=(np.amin(Zpos,axis=None)) or Zpos[k]>=(np.amax(Zpos,axis=None))):
        xLoc = Xpos[i]
