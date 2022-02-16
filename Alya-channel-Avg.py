@@ -110,6 +110,8 @@ if('OFOAM' in codeName):
     if('PAR' in fileType):
       case.caseType = ['Decomposed Case']
     case.UpdatePipeline()
+    case = CleanToGrid(Input=case)
+    case.UpdatePipeline()
     print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
     startTime = time.time()
     case = ProgrammableFilter(Input=case)
@@ -251,6 +253,7 @@ print("--|| NEK :: EVALUATING DIMENSIONS FOR SPANWISE AVERAGE")
 startTime = time.time()
 
 (xmin,xmax,ymin,ymax,zmin,zmax) =  case.GetDataInformation().GetBounds()
+print("----|| INFO: BOX SIZE = %.2f %.2f %.2f %.2f %.2f %.2f"%(xmin,xmax,ymin,ymax,zmin,zmax))
 
 if("DFUSER" in geomType):
   
@@ -289,7 +292,7 @@ else:
   slice1.UpdatePipeline()
   
   Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
-  print("----|| ALYA :: WORKING WITH ",Nplane," PLANAR POINTS")
+  print("----|| INFO :: WORKING WITH ",Nplane," PLANAR POINTS")
   
   N = int(Ntotal/Nplane)
   zmid = (zmin+zmax)/2
@@ -402,16 +405,18 @@ if('1D' in avgDim):
   
   startTime = time.time()
   for i in range(N):
-  	# create a new 'Transform'
-  	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
-  	# Properties modified on transform1.Transform
-  	if("DFUSER" in geomType):
-  	  transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
-  	else:  
-  	  transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]  
-  	#resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1)
-  	resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
-  	resample_transforms.append(resampleWithDataset1)
+    # create a new 'Transform'
+    transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
+    # Properties modified on transform1.Transform
+    if("DFUSER" in geomType):
+      transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
+    else:  
+      transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]  
+    try:
+      resampleWithDataset1 = ResampleWithDataset(Input=PF1,Source=transform1)
+    except:
+      resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
+    resample_transforms.append(resampleWithDataset1)
   print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
   HideAll()
   
@@ -426,8 +431,8 @@ if('1D' in avgDim):
   import numpy as np
 
   varFull = inputs[0].PointData.keys()
-  print("----|| ST AVG INFO : WORKING ON ",varFull)
-  N=len(inputs);
+  print("----|| INFO : WORKING ON ",varFull)
+  N=len(inputs)-1;
   for varName in varFull:
      avg = 0.0*(inputs[0].PointData[varName])
      for i in range(N):
