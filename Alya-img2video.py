@@ -16,7 +16,7 @@ argpar.add_argument("--start",type=int,help="start number of the frame",dest="st
 
 # Parse inputs
 args = argpar.parse_args()
-if not args.size:  args.size  = "1842x988"
+if not args.size:  args.size  = "1920x1080"
 if not args.fps:   args.fps   = 24
 if not args.start: args.start = 0
 
