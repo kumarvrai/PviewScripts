@@ -106,11 +106,9 @@ if('OFOAM' in codeName):
   
   case = OpenDataFile(fileName)
   if('INS' in fileType):
-    case.PointArrays = ['p','U']
+    case.CellArrays = ['p','U']
     if('PAR' in fileType):
       case.caseType = ['Decomposed Case']
-    case.UpdatePipeline()
-    case = CleanToGrid(Input=case)
     case.UpdatePipeline()
     print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
     startTime = time.time()
@@ -122,14 +120,13 @@ if('OFOAM' in codeName):
     varNames1 = ['AVPRE','AVVEL']
     for (i,var) in enumerate(varNames0):
      outName = varNames1[i]
-     avg = (inputs[0].PointData[var])
-     output.PointData.append(avg,outName)
+     avg = (inputs[0].CellData[var])
+     output.CellData.append(avg,outName)
     """
     case.UpdatePipeline()
-    print(case.PointData.keys())
     print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
   elif('AVG' in fileType):
-    case.PointArrays = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
+    case.CellArrays = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
     if('PAR' in fileType):
       case.caseType = ['Decomposed Case']
     case.UpdatePipeline()
@@ -143,14 +140,20 @@ if('OFOAM' in codeName):
     varNames1 = ['AVPRE','AVVEL','AVPR2','RESTR']
     for (i,var) in enumerate(varNames0):
      outName = varNames1[i]
-     avg = (inputs[0].PointData[var])
-     output.PointData.append(avg,outName)
+     avg = (inputs[0].CellData[var])
+     output.CellData.append(avg,outName)
     """
     case.UpdatePipeline()
     print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
   else:
     raise ValueError('--|| ALYA ERROR :: FILETYPE NOT RECONIZED.')
   case.UpdatePipeline()
+
+  print("--|| NEK :: CONVERT CELL DATA TO POINT DATA.")
+  startTime = time.time()
+  case = CellDatatoPointData(Input=case)
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
 print("--|| NEK :: TEMPORAL AVERAGING.")
 startTime = time.time()
