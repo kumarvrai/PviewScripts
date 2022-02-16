@@ -108,7 +108,7 @@ if('OFOAM' in codeName):
   if('INS' in fileType):
     case.CellArrays = ['p','U']
     if('PAR' in fileType):
-      case.caseType = ['Decomposed Case']
+      case.CaseType = ['Decomposed Case']
     case.UpdatePipeline()
     print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
     startTime = time.time()
