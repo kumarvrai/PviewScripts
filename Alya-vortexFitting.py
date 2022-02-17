@@ -163,10 +163,10 @@ print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t)
 if('ensi' in fileName):
  d = dsa.WrapDataObject(inputs[0].GetBlock(0))
 elif('pvd' in fileName):
- d = dsa.WrapDataObject(inputs[0])
+ d = dsa.WrapDataObject(inputs[0].VTKObject)
 x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
 y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
-vortex_field = np.asarray(d.PointData["SWIRL"],dtype=np.double)
+vortex_field = np.asarray(d.PointData["QCRIT"],dtype=np.double)
 
 # ---- PEAK DETECTION ----#
 peaks = fitting.find_peaks(vortex_field, threshold=0.0, box_size=0.1)
@@ -181,7 +181,6 @@ vortices = list()
 vortices = fitting.get_vortices(vfield, peaks, vorticity, args.rmax, args.correlation_threshold)
 print('--|| ALYA : Accepted vortices=', len(vortices))
 
-output.ShallowCopy(inputs[0].VTKObject)
 output.PointData.append(avg, varName0)
 
 """

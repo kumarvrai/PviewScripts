@@ -106,9 +106,9 @@ if('OFOAM' in codeName):
   
   case = OpenDataFile(fileName)
   if('INS' in fileType):
-    case.PointArrays = ['p','U']
+    case.CellArrays = ['p','U']
     if('PAR' in fileType):
-      case.caseType = ['Decomposed Case']
+      case.CaseType = ['Decomposed Case']
     case.UpdatePipeline()
     print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
     startTime = time.time()
@@ -120,14 +120,13 @@ if('OFOAM' in codeName):
     varNames1 = ['AVPRE','AVVEL']
     for (i,var) in enumerate(varNames0):
      outName = varNames1[i]
-     avg = (inputs[0].PointData[var])
-     output.PointData.append(avg,outName)
+     avg = (inputs[0].CellData[var])
+     output.CellData.append(avg,outName)
     """
     case.UpdatePipeline()
-    print(case.PointData.keys())
     print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
   elif('AVG' in fileType):
-    case.PointArrays = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
+    case.CellArrays = ['pMean','UMean','pPrime2Mean','UPrime2Mean']
     if('PAR' in fileType):
       case.caseType = ['Decomposed Case']
     case.UpdatePipeline()
@@ -141,14 +140,20 @@ if('OFOAM' in codeName):
     varNames1 = ['AVPRE','AVVEL','AVPR2','RESTR']
     for (i,var) in enumerate(varNames0):
      outName = varNames1[i]
-     avg = (inputs[0].PointData[var])
-     output.PointData.append(avg,outName)
+     avg = (inputs[0].CellData[var])
+     output.CellData.append(avg,outName)
     """
     case.UpdatePipeline()
     print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
   else:
     raise ValueError('--|| ALYA ERROR :: FILETYPE NOT RECONIZED.')
   case.UpdatePipeline()
+
+  print("--|| NEK :: CONVERT CELL DATA TO POINT DATA.")
+  startTime = time.time()
+  case = CellDatatoPointData(Input=case)
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
 print("--|| NEK :: TEMPORAL AVERAGING.")
 startTime = time.time()
@@ -251,6 +256,7 @@ print("--|| NEK :: EVALUATING DIMENSIONS FOR SPANWISE AVERAGE")
 startTime = time.time()
 
 (xmin,xmax,ymin,ymax,zmin,zmax) =  case.GetDataInformation().GetBounds()
+print("----|| INFO: BOX SIZE = %.2f %.2f %.2f %.2f %.2f %.2f"%(xmin,xmax,ymin,ymax,zmin,zmax))
 
 if("DFUSER" in geomType):
   
@@ -289,7 +295,7 @@ else:
   slice1.UpdatePipeline()
   
   Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
-  print("----|| ALYA :: WORKING WITH ",Nplane," PLANAR POINTS")
+  print("----|| INFO :: WORKING WITH ",Nplane," PLANAR POINTS")
   
   N = int(Ntotal/Nplane)
   zmid = (zmin+zmax)/2
@@ -402,16 +408,18 @@ if('1D' in avgDim):
   
   startTime = time.time()
   for i in range(N):
-  	# create a new 'Transform'
-  	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
-  	# Properties modified on transform1.Transform
-  	if("DFUSER" in geomType):
-  	  transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
-  	else:  
-  	  transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]  
-  	#resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1)
-  	resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
-  	resample_transforms.append(resampleWithDataset1)
+    # create a new 'Transform'
+    transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
+    # Properties modified on transform1.Transform
+    if("DFUSER" in geomType):
+      transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
+    else:  
+      transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]  
+    try:
+      resampleWithDataset1 = ResampleWithDataset(Input=PF1,Source=transform1)
+    except:
+      resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
+    resample_transforms.append(resampleWithDataset1)
   print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
   HideAll()
   
@@ -426,8 +434,8 @@ if('1D' in avgDim):
   import numpy as np
 
   varFull = inputs[0].PointData.keys()
-  print("----|| ST AVG INFO : WORKING ON ",varFull)
-  N=len(inputs);
+  print("----|| INFO : WORKING ON ",varFull)
+  N=len(inputs)-1;
   for varName in varFull:
      avg = 0.0*(inputs[0].PointData[varName])
      for i in range(N):
