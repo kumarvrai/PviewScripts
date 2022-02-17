@@ -52,17 +52,18 @@ for instant in listOfInstants:
   # Compute and smooth the gradient of velocity
   gradv = mesh.smooth(mesh.gradient(field['VELOC']),iters=3)
   
-  # # Store gradients
-  # field['GRADV'] = mesh.newArray(ndim=6)
-  # field['GRADV'][:,0] = gradv[:,0] # XX
-  # field['GRADV'][:,1] = gradv[:,4] # YY
-  # field['GRADV'][:,2] = gradv[:,8] # ZZ
-  # field['GRADV'][:,3] = gradv[:,1] # XY
-  # field['GRADV'][:,4] = gradv[:,2] # XZ
-  # field['GRADV'][:,5] = gradv[:,5] # YZ
   
   # Compute Vorticity, Q and Omega from the gradient
   if('ALL' not in PLOTVAR):
+    if('GRADV' in PLOTVAR):
+      # Store gradients
+      field['GRADV'] = mesh.newArray(ndim=6)
+      field['GRADV'][:,0] = gradv[:,0] # XX
+      field['GRADV'][:,1] = gradv[:,4] # YY
+      field['GRADV'][:,2] = gradv[:,8] # ZZ
+      field['GRADV'][:,3] = gradv[:,1] # XY
+      field['GRADV'][:,4] = gradv[:,2] # XZ
+      field['GRADV'][:,5] = gradv[:,5] # YZ
     if('VOR' in PLOTVAR):
       field['VORTI'] = pyAlya.postproc.vorticity(gradv)
     if('QCR' in PLOTVAR):
