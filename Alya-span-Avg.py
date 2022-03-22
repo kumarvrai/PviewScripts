@@ -22,6 +22,9 @@ method     = sys.argv[6]
 file_fmt     = sys.argv[7]
 zDec = 6; xDec = 6
 
+c = vtk.vtkMultiProcessController.GetGlobalController()
+mpi_ranks = c.GetNumberOfProcesses()
+print("--|| ALYA :: WORKING WITH %d RANKS." % mpi_ranks)
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 #
@@ -78,17 +81,18 @@ f.write("xDec = %d\n" % xDec)
 f.write("zDec = %d\n" % zDec)
 f.close()
 
-if('PVD' in file_fmt):
-  #print("--|| ALYA :: APPLYING D3 FILTER")
-  #startTime = time.time()
-  #case = D3(Input=case)
-  #case.UpdatePipeline()
-  #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-  print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
-  startTime = time.time()
-  case = CleantoGrid(Input=case)
-  case.UpdatePipeline()
-  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+#if(mpi_ranks!=1):
+#  if('PVD' in file_fmt):
+#    print("--|| ALYA :: APPLYING D3 FILTER")
+#    startTime = time.time()
+#    case = D3(Input=case)
+#    case.UpdatePipeline()
+#    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+#    #print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
+#    #startTime = time.time()
+#    #case = CleantoGrid(Input=case)
+#    #case.UpdatePipeline()
+#    #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 
 Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
@@ -214,6 +218,7 @@ Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
 print("----|| ALYA :: WORKING WITH ",Nplane," PLANAR POINTS")
 
 N = int(Ntotal/Nplane)
+#N = 145;
 zmid = (zmin+zmax)/2
 zpos = np.around(np.asarray(np.arange(N)*(zmax-zmin)/(N-1),dtype=np.double),decimals=zDec)
 delta_z = (zmax-zmin)/(N-1)
@@ -246,6 +251,17 @@ import os
 import vtk
 import sys
 import numpy as np
+
+caseName = 'naca'
+fileName = './naca.pvd'
+model = 'DNS'
+nu = 0.000005
+dim = '2D'
+mode = 'SAVG'
+method = 'INTERP'
+file_fmt = 'BUDPVD'
+xDec = 6
+zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read())
@@ -288,6 +304,18 @@ import os
 import vtk
 import numpy as np
 from scipy.interpolate import griddata
+
+caseName = 'naca'
+fileName = './naca.pvd'
+model = 'DNS'
+nu = 0.000005
+dim = '2D'
+mode = 'SAVG'
+method = 'INTERP'
+file_fmt = 'BUDPVD'
+xDec = 6
+zDec = 6
+
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read())
 
@@ -378,102 +406,126 @@ if("SAVG" in mode):
     startTime = time.time()
     PF2 = ProgrammableFilter(Input=[PF1]+resample_transforms)
     PF2.Script = \
-  """
-  import os
-  import vtk
-  import numpy as np
-  from scipy.interpolate import griddata
-  inpFile = os.getcwd()+'/'+'inputFile.py'
-  exec(open(inpFile).read())
+"""
+import os
+import vtk
+import numpy as np
+from scipy.interpolate import griddata
 
-  c = vtk.vtkMultiProcessController.GetGlobalController()
-  rank = c.GetLocalProcessId()
+caseName = 'naca'
+fileName = './naca.pvd'
+model = 'DNS'
+nu = 0.000005
+dim = '2D'
+mode = 'SAVG'
+method = 'INTERP'
+file_fmt = 'BUDPVD'
+xDec = 6
+zDec = 6
 
-  varFull = ['PRESS']
+inpFile = os.getcwd()+'/'+'inputFile.py'
+exec(open(inpFile).read())
 
-  if(rank==0):
-    t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-    print("----|| ALYA : ARRAYS AT TIME %.3f " % (t), varFull)
+c = vtk.vtkMultiProcessController.GetGlobalController()
+rank = c.GetLocalProcessId()
 
-  N=len(inputs)-1;
-  
-  for varName in varFull:
-    avgVarName = "AV"+varName[0:3]
-    varName0 = "SD"+varName[0:3]
-   a_src = inputs[0].PointData[avgVarName]
-   avg = 0.0*(inputs[0].PointData[varName])
-   for i in range(N):
-     s_src = inputs[i+1].PointData[varName]
-     avg = avg + (s_src-a_src)**2
-   avg = avg/N
-   avg = np.asarray(avg, dtype=np.float64)
-   output.PointData.append(avg,varName0)
-  """
+varFull = ['PRESS']
+
+if(rank==0):
+  t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
+  print("----|| ALYA : ARRAYS AT TIME %.3f " % (t), varFull)
+
+N=len(inputs)-1;
+
+for varName in varFull:
+  avgVarName = "AV"+varName[0:3]
+  varName0 = "SD"+varName[0:3]
+ a_src = inputs[0].PointData[avgVarName]
+ avg = 0.0*(inputs[0].PointData[varName])
+ for i in range(N):
+   s_src = inputs[i+1].PointData[varName]
+   avg = avg + (s_src-a_src)**2
+ avg = avg/N
+ avg = np.asarray(avg, dtype=np.float64)
+ output.PointData.append(avg,varName0)
+"""
   else:
     PF2 = ProgrammableFilter(Input=[PF1,case])
     ### first input is the grid
     ### the rest of them are data to be averaged
     PF2.Script = \
   """
-  import os
-  import vtk
-  import numpy as np
-  from scipy.interpolate import griddata
-  inpFile = os.getcwd()+'/'+'inputFile.py'
-  exec(open(inpFile).read())
+import os
+import vtk
+import numpy as np
+from scipy.interpolate import griddata
 
-  c = vtk.vtkMultiProcessController.GetGlobalController()
-  rank = c.GetLocalProcessId()
+caseName = 'naca'
+fileName = './naca.pvd'
+model = 'DNS'
+nu = 0.000005
+dim = '2D'
+mode = 'SAVG'
+method = 'INTERP'
+file_fmt = 'BUDPVD'
+xDec = 6
+zDec = 6
 
-  varFull = ['PRESS']
+inpFile = os.getcwd()+'/'+'inputFile.py'
+exec(open(inpFile).read())
 
-  if(rank==0):
-    t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
-    print("--|| ALYA :: ARRAYS AT TIME %.3f " % (t), varFull) 
+c = vtk.vtkMultiProcessController.GetGlobalController()
+rank = c.GetLocalProcessId()
 
-  if('ensi' in fileName):
-    d = dsa.WrapDataObject(inputs[1].GetBlock(0))
-  elif('pvd' in fileName):
-    d = dsa.WrapDataObject(inputs[1].VTKObject)
-  x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
-  y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
-  z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
-  ## SLICE GEOMETRY
-  if('ensi' in fileName):
-    out = dsa.WrapDataObject(inputs[0].GetBlock(0))
-  elif('pvd' in fileName):
-    out = dsa.WrapDataObject(inputs[0].VTKObject)
-  x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
-  y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
-  ind_2d = np.lexsort((y_2d,x_2d));
-  print("--|| ALYA CHECK :: SHAPE OF SLICE", np.shape(ind_2d))
-  z_vec = np.unique(z)
-  N = len(z_vec)
-  
-  for varName in varFull:
-   avgVarName = "AV"+varName[0:3]
-   varName0 = "SD"+varName[0:3]
-   avg = 0.0*np.asarray(out.PointData[avgVarName],dtype=np.double)
-   src = np.asarray(d.PointData[varName],dtype=np.double)
-   a_src = np.asarray(out.PointData[avgVarName],dtype=np.double)
-   for n in range(N):
-    ind_z = np.where(z == z_vec[n])
-    x_l = x[ind_z];
-    y_l = y[ind_z];
-    s_src = src[ind_z]
-    ind = np.lexsort((y_l,x_l)); 
-    if("SORT" in method):
-     avg[ind_2d] = avg[ind_2d] + (s_src[ind]-a_src[ind_2d])**2
-    elif("INTERP" in method):
-     s_src = griddata((x_l,y_l),s_src, (x_2d,y_2d), method='nearest')
-     avg = avg + (s_src-a_src)**2
-    else:
-     raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE STD?')
-   avg = avg/N;
-   avg = np.asarray(avg, dtype=np.float64)
-   output.PointData.append(avg, varName0)
-  
-  """
+varFull = ['PRESS']
+
+if(rank==0):
+  t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
+  print("--|| ALYA :: ARRAYS AT TIME %.3f " % (t), varFull) 
+
+if('ensi' in fileName):
+  d = dsa.WrapDataObject(inputs[1].GetBlock(0))
+elif('pvd' in fileName):
+  d = dsa.WrapDataObject(inputs[1].VTKObject)
+x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
+y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
+z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
+## SLICE GEOMETRY
+if('ensi' in fileName):
+  out = dsa.WrapDataObject(inputs[0].GetBlock(0))
+elif('pvd' in fileName):
+  out = dsa.WrapDataObject(inputs[0].VTKObject)
+x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
+y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
+ind_2d = np.lexsort((y_2d,x_2d));
+#print("--|| ALYA CHECK :: SHAPE OF SLICE", np.shape(ind_2d))
+z_vec = np.unique(z)
+N = len(z_vec)
+
+for varName in varFull:
+ avgVarName = "AV"+varName[0:3]
+ varName0 = "SD"+varName[0:3]
+ avg = 0.0*np.asarray(out.PointData[avgVarName],dtype=np.double)
+ src = np.asarray(d.PointData[varName],dtype=np.double)
+ a_src = np.asarray(out.PointData[avgVarName],dtype=np.double)
+ for n in range(N):
+  ind_z = np.where(z == z_vec[n])
+  x_l = x[ind_z];
+  y_l = y[ind_z];
+  s_src = src[ind_z]
+  ind = np.lexsort((y_l,x_l)); 
+  if("SORT" in method):
+   avg[ind_2d] = avg[ind_2d] + (s_src[ind]-a_src[ind_2d])**2
+  elif("INTERP" in method):
+   s_src = griddata((x_l,y_l),s_src, (x_2d,y_2d), method='nearest')
+   avg = avg + (s_src-a_src)**2
+  else:
+   raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE STD?')
+ avg = avg/N;
+ avg = np.asarray(avg, dtype=np.float64)
+ output.PointData.append(avg, varName0)
+
+"""
   PF2.UpdatePipeline() 
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   print("--|| ALYA :: WORKSPACE VARIABLES AFTER STD-DEV CALC", PF1.PointData.keys())
