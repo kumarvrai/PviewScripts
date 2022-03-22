@@ -234,8 +234,10 @@ if("PINTERP" in method):
   for i in range(N):
     # create a new 'Transform'
     transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
-    resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1,guiName="resample{}".format(i))
-    #resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1,guiName="resample{}".format(i))
+    try:
+      resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
+    except:  
+      resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1)
     resample_transforms.append(resampleWithDataset1)
     # Properties modified on transform1.Transform
     transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
@@ -395,7 +397,10 @@ if("SAVG" in mode):
     for i in range(N):
       # create a new 'Transform'
       transform1 = Transform(Input=PF1,guiName="transform{}".format(i))
-      resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1,guiName="resample{}".format(i))
+      try:
+        resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
+      except:  
+        resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1)
       resample_transforms.append(resampleWithDataset1)
       # Properties modified on transform1.Transform
       transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
@@ -691,8 +696,10 @@ if('1D' in dim):
    for i in range(N):
    	# create a new 'Transform'
    	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
-   	#resampleWithDataset1=ResampleWithDataset(Input=GOUD1,Source=transform1,guiName="resample{}".format(i))
-   	resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1,guiName="resample{}".format(i))
+   	try:
+   	  resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1)
+   	except:  
+   	  resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
    	resample_transforms.append(resampleWithDataset1)
    	# Properties modified on transform1.Transform
    	transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]
