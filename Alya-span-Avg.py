@@ -273,6 +273,8 @@ rank = c.GetLocalProcessId()
 t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 
 varFull = inputs[0].PointData.keys()
+varFull = [x for x in varFull if len(x) == 5]
+
 if(rank==0):
   print("----|| ALYA : ARRAYS AT TIME %.3f " % (t) ,varFull)
 
@@ -326,6 +328,7 @@ rank = c.GetLocalProcessId()
 
 t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 varFull = inputs[1].PointData.keys()
+varFull = [x for x in varFull if len(x) == 5]
 
 if(rank==0):
   print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
