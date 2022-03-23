@@ -77,7 +77,7 @@ def genSphereLoc(xMin,xMax,zMin,zMax,delx,delz,h):
 
 ###########################################
 fileType = sys.argv[1]
-RGH_SCRPTS='/home/kvishal/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
+RGH_SCRPTS=os.path.expanduser('~')+'/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
 if fileType == 'GMSH':
    geofile_in = 'naca.msh'
    geofile_out= 'naca_r.msh'
@@ -141,8 +141,8 @@ rad = center_y+h
 
 # Generate roughness locations locations (x,y)
 vecLoc = genSphereLoc(x_min, x_max, z_min, z_max, 5.0*h, 5.0*h, h)
-XposU = vecLoc[0]
-XposD = vecLoc[1]
+XposU = vecLoc[0];print('----||INFO. XLOC SS SIDE =',XposU)
+XposD = vecLoc[1];print('----||INFO. XLOC PS SIDE =',XposD)
 factRoughU = Fexp(XposU)
 factRoughU = factRoughU/np.amax(factRoughU)
 factRoughD = Fexp(XposD)
