@@ -81,18 +81,18 @@ f.write("xDec = %d\n" % xDec)
 f.write("zDec = %d\n" % zDec)
 f.close()
 
-#if(mpi_ranks!=1):
-#  if('PVD' in file_fmt):
-#    print("--|| ALYA :: APPLYING D3 FILTER")
-#    startTime = time.time()
-#    case = D3(Input=case)
-#    case.UpdatePipeline()
-#    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-#    #print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
-#    #startTime = time.time()
-#    #case = CleantoGrid(Input=case)
-#    #case.UpdatePipeline()
-#    #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+if('D3' in file_fmt):
+    print("--|| ALYA :: APPLYING D3 FILTER")
+    startTime = time.time()
+    case = D3(Input=case)
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+if('CLEAN' in file_fmt):
+    print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
+    startTime = time.time()
+    case = CleantoGrid(Input=case)
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 
 Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
