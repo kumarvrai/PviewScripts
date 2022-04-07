@@ -1,4 +1,4 @@
-initializeVars = '/home/kvishal/1.post_process/1.airfoil/3.PviewScripts/initializeVariables.py'
+initializeVars = '/home/u/ugo/kvishal/1.post_process/0.alya_pv_scripts/initializeVariables.py'
 import sys
 from paraview.simple import *
 pyVer = sys.version_info[0]
@@ -17,10 +17,27 @@ if read_fields_from_file:
   case = OpenDataFile(ID+IF)
   case.PointArrays = arrayList
   case.UpdatePipeline()
-
+  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   reader = GetActiveSource()
   view = GetActiveView()
   times = reader.TimestepValues
+  print("--|| ALYA :: TOTAL TEMPORAL STEPS =",len(times))
+
+  if calculate_pod_slice:
+    print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER.")
+    startTime = time.time()
+    case = CleantoGrid(Input=case)
+    #slice.SliceType.Origin = [0.0, 0.0, 0.0]
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+    #print("--|| ALYA :: TAKING DATA SLICE")
+    #startTime = time.time()
+    #case = Slice(Input=case)
+    #case.SliceType = 'Plane'
+    ##slice.SliceType.Origin = [0.0, 0.0, 0.0]
+    #case.SliceType.Normal = [0.0, 0.0, 1.0]
+    #case.UpdatePipeline()
+    #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   # TEMPORAL AVERAGING
   print("--|| ALYA :: TEMPORAL AVERAGING OF CODE ARRAYS")
   startTime = time.time()
