@@ -43,10 +43,19 @@ def wrap_cyl(r, theta,xc0, yc0):
     return x, y
 
 def genSphereLoc(xMin,xMax,zMin,zMax,delx,delz,h):
-    airCoordU = RGH_SCRPTS+'/naca4412-UP.txt'
-    airCoordD = RGH_SCRPTS+'/naca4412-DOWN.txt'
+    if('4412' in foilType):    
+      airCoordU = RGH_SCRPTS+'/naca4412-UP.txt'
+      airCoordD = RGH_SCRPTS+'/naca4412-DOWN.txt'
+    elif('0012' in foilType):  
+      airCoordU = RGH_SCRPTS+'/naca0012-UP.txt'
+      airCoordD = RGH_SCRPTS+'/naca0012-DOWN.txt'
+    else:
+      raise ValueError('--|| ALYA ERROR :: AIRFOIL TYPE NOT RECONIZED.')
     aircup = np.loadtxt(airCoordU)
-    aircdo = np.flip(np.loadtxt(airCoordD),axis=0)
+    if('4412' in foilType):
+      aircdo = np.flip(np.loadtxt(airCoordD),axis=0)
+    else:
+      aircdo = np.loadtxt(airCoordD)
     # Upper Surface
     dsA = np.sqrt(1.0 + np.array(np.diff(aircup[:,1])/np.diff(aircup[:,0])))
     ds0 = np.zeros((len(dsA)+1,1),dtype='float')
@@ -77,6 +86,7 @@ def genSphereLoc(xMin,xMax,zMin,zMax,delx,delz,h):
 
 ###########################################
 fileType = sys.argv[1]
+foilType = sys.argv[2]
 RGH_SCRPTS='/home/kvishal/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
 if fileType == 'GMSH':
    geofile_in = 'naca.msh'
@@ -88,7 +98,12 @@ elif fileType == 'ALYA':
    geofile_out= 'naca_r.geo.dat'
    bString = 'COORDINATES'
    eString = 'END_COORDINATES'
-airfoilCoord = RGH_SCRPTS+'/naca4412.txt'
+if('4412' in foilType):    
+  airfoilCoord = RGH_SCRPTS+'/naca4412.txt'
+elif('0012' in foilType):  
+  airfoilCoord = RGH_SCRPTS+'/naca0012.txt'
+else:
+  raise ValueError('--|| ALYA ERROR :: AIRFOIL TYPE NOT RECONIZED.')
 expDistRough = RGH_SCRPTS+'/expDistRough.txt'
 
 f = open(geofile_in, 'r')
@@ -122,10 +137,10 @@ print('----||DONE. TIME =',time.time()-startTime,'sec')
 
 #Define some Parameters
 x_min = 0.0; x_max = 0.2;
-z_min = 0.0; z_max = 0.2;
+z_min = 0.0; z_max = 0.1;
 print('----||INFO. WORKING IN BOX  XMIN=',x_min,'XMAX=',x_max,'ZMIN=',z_min,'ZMAX=',z_max)
 
-z_dom_fac = int((z_max-z_min)/0.2)
+z_dom_fac = (z_max-z_min)/0.2
 print('----||INFO. Z-DOMAIN FACTOR =',z_dom_fac)
 
 r0 = 0.5
@@ -154,9 +169,9 @@ rS = []
 # Roughness on Upper surface
 for i in range(0,len(XposU)):
   if(XposU[i]<0.01 or XposU[i]>=0.1):
-     Zpos = np.linspace(z_min,z_max,z_dom_fac*rand.randint(4,8))
+     Zpos = np.linspace(z_min,z_max,int(z_dom_fac*rand.randint(4,8)))
   else:
-     Zpos = np.linspace(z_min,z_max,z_dom_fac*rand.randint(8,12))
+     Zpos = np.linspace(z_min,z_max,int(z_dom_fac*rand.randint(8,12)))
   for k in range(0,len(Zpos)):
     if(Zpos[k]==np.amin(Zpos,axis=None) or Zpos[k]==np.amax(Zpos,axis=None)):
        xLoc = XposU[i]
@@ -174,9 +189,9 @@ for i in range(0,len(XposU)):
 # Roughness on Lower surface
 for i in range(0,len(XposD)):
   if(XposD[i]<0.01 or XposD[i]>=0.1):
-     Zpos = np.linspace(z_min,z_max,z_dom_fac*rand.randint(4,8))
+     Zpos = np.linspace(z_min,z_max,int(z_dom_fac*rand.randint(4,8)))
   else:
-     Zpos = np.linspace(z_min,z_max,z_dom_fac*rand.randint(8,12))
+     Zpos = np.linspace(z_min,z_max,int(z_dom_fac*rand.randint(8,12)))
   for k in range(0,len(Zpos)):
     if(Zpos[k]==np.amin(Zpos,axis=None) or Zpos[k]==np.amax(Zpos,axis=None)):
        xLoc = XposD[i]
