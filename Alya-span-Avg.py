@@ -81,18 +81,18 @@ f.write("xDec = %d\n" % xDec)
 f.write("zDec = %d\n" % zDec)
 f.close()
 
-#if(mpi_ranks!=1):
-#  if('PVD' in file_fmt):
-#    print("--|| ALYA :: APPLYING D3 FILTER")
-#    startTime = time.time()
-#    case = D3(Input=case)
-#    case.UpdatePipeline()
-#    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-#    #print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
-#    #startTime = time.time()
-#    #case = CleantoGrid(Input=case)
-#    #case.UpdatePipeline()
-#    #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+if('D3' in file_fmt):
+    print("--|| ALYA :: APPLYING D3 FILTER")
+    startTime = time.time()
+    case = D3(Input=case)
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+if('CLEAN' in file_fmt):
+    print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
+    startTime = time.time()
+    case = CleantoGrid(Input=case)
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 
 Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
@@ -273,6 +273,8 @@ rank = c.GetLocalProcessId()
 t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 
 varFull = inputs[0].PointData.keys()
+varFull = [x for x in varFull if len(x) == 5]
+
 if(rank==0):
   print("----|| ALYA : ARRAYS AT TIME %.3f " % (t) ,varFull)
 
@@ -326,6 +328,7 @@ rank = c.GetLocalProcessId()
 
 t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 varFull = inputs[1].PointData.keys()
+varFull = [x for x in varFull if len(x) == 5]
 
 if(rank==0):
   print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 

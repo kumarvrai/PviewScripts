@@ -105,6 +105,13 @@ stats['AVVEL'] = stats['AVVEL']/len(listOfInstants)
 stats['AVPGR'] = mesh.gradient(stats['AVPRE'])
 stats['AVVGR'] = mesh.gradient(stats['AVVEL'])
 
+stats.write(CASESTR,0,0.,basedir=ALT_BASEDIR,fmt='mpio',exclude_vars=[
+	'AVTEM','AVHFL','AVSTR','AVROT','AVSHE','AVSTF','AVRTF','AVTHF',
+	'AVPF2','AVTF2','TAYMS','KOLLS','KOLTS','CONVE','PRODU','DIFF1','DIFF2',
+	'DIFF3','PSTRA','DISSI','AVPVE','AVVE3'
+])
+exit(0)
+
 ## Do a second loop in time
 # This time compute all the necessary magnitudes and accumulate 
 # them as needed 

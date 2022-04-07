@@ -1,5 +1,5 @@
 #!/usr/bin/python
-activate_this = '/home/kvishal/softwares/coolVenv/bin/activate_this.py'
+activate_this = '/home/u/ugo/kvishal/softwares/coolVenv/bin/activate_this.py'
 import os
 import sys
 import time
@@ -42,6 +42,7 @@ tf=200.0
 # name of field to be decomposed
 fieldname = sys.argv[2]
 DIM = int(sys.argv[3])
+
 print('--|| ALYA : READING VARIABLE ',fieldname)
 if('TKENORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
@@ -51,6 +52,10 @@ elif('PRESNORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([1, 0, 0, 0])
+elif('BERNORM' in fieldname.upper()):
+ varName_code = ['PRESS','VELOC']
+ varName_calc = []
+ wtsMat = np.array([1, 0.5, 0.5, 0.5])
 elif('COMPND' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = ['RS_II','RS_IJ']
@@ -67,6 +72,7 @@ prefix="Re40_"
 # True= read data from case files; 
 # False= read data from fields.npz
 read_fields_from_file = True
+calculate_pod_slice   = False
 # Variable interpolation form= %(NAME)s is available
 fields_filename="""{}fields_{}.npz""".format(OD,fieldname)
 geom_filename="""{}Geometry.vtu""".format(OD)

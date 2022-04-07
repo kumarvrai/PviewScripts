@@ -32,7 +32,7 @@ def wrap_cyl(r, theta,xc0, yc0):
     return x, y
 
 ###########################################
-RGH_SCRPTS='/home/kvishal/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
+RGH_SCRPTS=os.path.expanduser('~')+'/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
 fileType = 'alya'
 if fileType == 'msh':
    geofile_in = 'naca.msh'
@@ -143,7 +143,7 @@ center = []
 #cset = ax.plot_surface(xAir,zAir,yAir,color='w')
 #ax.clabel(cset, fontsize=9, inline=1)
 #ax.plot3D(coordAirfoil[:,0],coordAirfoil[:,1],0.2,'k')
-
+print('----||INFO. XLOC SS/PS SIDE =',Xpos)
 nzR = np.floor_divide(zdom,h)
 rS = []
 # Roughness on Upper surface

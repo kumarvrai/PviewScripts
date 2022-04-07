@@ -35,6 +35,7 @@ RUN_SECOND_LOOP = False
 
 # In case of restart, load the previous data
 listOfInstants = [ii for ii in range(START,END+DT,DT)]
+#listOfInstants = [ii for ii in range(1000,19000+1000,1000)] + [ii for ii in range(19500,66000+500,500)]
 
 
 mesh = pyAlya.Mesh.read(CASESTR,basedir=BASEDIR,alt_basedir=ALT_BASEDIR,fmt=FILE_FMT,read_commu=True if COMM == 1 else False,read_massm=False)
@@ -65,6 +66,7 @@ for instant in listOfInstants:
 	# Compute time-weighted average 
 	dt   = header.time - time  # weight
 	time = header.time         # sum_weights
+	#pyAlya.pprint(1,'Time Stamp = %f'%time,flush=True)
 
 	# Accumulate the statistics
 	stats['AVPRE'] += pyAlya.stats.addS1(stats['AVPRE'],fields['AVPRE'],w=1. if instant == START else dt/time)
