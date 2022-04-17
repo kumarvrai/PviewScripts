@@ -1,6 +1,7 @@
 #!/usr/bin/python
 activate_this = '/home/u/ugo/kvishal/softwares/coolVenv/bin/activate_this.py'
 import os
+import glob
 import sys
 import time
 import numpy as np
@@ -13,7 +14,7 @@ pyVer = sys.version_info[0]
 if pyVer < 3:
   execfile(activate_this, dict(__file__=activate_this))
 else:
-  exec(open(activate_this).read())
+  exec(open(activate_this).read(), {'__file__': activate_this})
 import modred as mr
 #####################[IOData]###########################
 CODE=sys.argv[5]
@@ -25,11 +26,14 @@ niaScrh = '/scratch/u/ugo/kvishal/research/0.Alya/'
 ID = os.getcwd()+'/'
 # input .foam file
 if('ALYA' in CODE):
- IF = sys.argv[1]+'.ensi.case'
+ IF = ID+sys.argv[1]+'.ensi.case'
 elif('NEK' in CODE):
- IF = sys.argv[1]+'.nek5000'
+ IF = ID+sys.argv[1]+'.nek5000'
 elif('PVD' in CODE):
- IF = sys.argv[1]+'.pvd'
+ IF = ID+sys.argv[1]+'.pvd'
+elif('VTM' in CODE):
+ fNames = glob.glob("*.vtm")
+ IF = [ID+ff for ff in fNames]
 else:
  raise Exception('--|| ALYA : PROVIDE A VALID CODE FILE ')
 print('--|| ALYA : READING FILE ',IF)
@@ -48,6 +52,14 @@ if('TKENORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([0, 1, 1, 1])
+elif('UNORM' in fieldname.upper()):
+ varName_code = ['PRESS','VELOC']
+ varName_calc = []
+ wtsMat = np.array([0, 1, 0, 0])
+elif('VNORM' in fieldname.upper()):
+ varName_code = ['PRESS','VELOC']
+ varName_calc = []
+ wtsMat = np.array([0, 0, 1, 0])
 elif('PRESNORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
@@ -72,7 +84,7 @@ prefix="Re40_"
 # True= read data from case files; 
 # False= read data from fields.npz
 read_fields_from_file = True
-calculate_pod_slice   = False
+calculate_pod_slice   = True
 # Variable interpolation form= %(NAME)s is available
 fields_filename="""{}fields_{}.npz""".format(OD,fieldname)
 geom_filename="""{}Geometry.vtu""".format(OD)
@@ -84,7 +96,7 @@ do_DMD = False
 # accuracy determines how many modes will be calculated.
 accuracy=0.9999
 # spatial mode to be calculated, M=0 means determined by program according to accuracy
-M = 10
+M = 30
 #
 subtractAvg = True
 #

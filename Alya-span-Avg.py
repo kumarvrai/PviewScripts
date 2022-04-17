@@ -34,8 +34,8 @@ if('ENSI' in file_fmt):
  fileName = caseName+'.ensi.case'
 elif('VTK' in file_fmt): 
  fileName = caseName+'.pvd'
-elif('BUDENSI' in file_fmt): 
- fileName = caseName+'.ensi.case'
+elif('VTM' in file_fmt): 
+ fileName = 'AvgData_3D.vtm'
 elif('BUDPVD' in file_fmt): 
  fileName = './'+caseName+'.pvd'
 else:
@@ -63,7 +63,7 @@ else:
    elif(model == "TSTEP"):
     case.PointArrays = ['VELOC', 'PRESS']
 case.UpdatePipeline()
-caseVarNames = case.PointArrays
+caseVarNames = case.PointData.keys()
 print("--|| ALYA : LOADED VARIABLES", caseVarNames)
 print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
@@ -113,7 +113,7 @@ if("SAVG" in mode):
    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
 elif("FAVG" in mode):
- if('PVD' not in file_fmt):
+ if('SKIP' not in file_fmt):
    print("--|| ALYA :: TEMPORAL AVERAGING  ALYA-AVERAGED ARRAYS")
    startTime = time.time()
    case = TemporalStatistics(Input=case)
@@ -266,7 +266,7 @@ xDec = 6
 zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
-exec(open(inpFile).read())
+exec(open(inpFile).read(), {'__file__': inpFile})
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
 rank = c.GetLocalProcessId()
@@ -321,7 +321,7 @@ xDec = 6
 zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
-exec(open(inpFile).read())
+exec(open(inpFile).read(), {'__file__': inpFile})
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
 rank = c.GetLocalProcessId()
@@ -333,18 +333,18 @@ varFull = [x for x in varFull if len(x) == 5]
 if(rank==0):
   print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
 
-if('ensi' in fileName):
+try:
  d = dsa.WrapDataObject(inputs[1].GetBlock(0))
-elif('pvd' in fileName):
+except: 
  d = dsa.WrapDataObject(inputs[1].VTKObject)
 x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
 y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
 z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
 
 ## SLICE GEOMETRY
-if('ensi' in fileName):
+try:
  out = dsa.WrapDataObject(inputs[0].GetBlock(0))
-elif('pvd' in fileName):
+except:
  out = dsa.WrapDataObject(inputs[0].VTKObject)
 
 x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
@@ -432,7 +432,7 @@ xDec = 6
 zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
-exec(open(inpFile).read())
+exec(open(inpFile).read(), {'__file__': inpFile})
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
 rank = c.GetLocalProcessId()
@@ -480,7 +480,7 @@ xDec = 6
 zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
-exec(open(inpFile).read())
+exec(open(inpFile).read(), {'__file__': inpFile})
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
 rank = c.GetLocalProcessId()
@@ -491,17 +491,17 @@ if(rank==0):
   t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
   print("--|| ALYA :: ARRAYS AT TIME %.3f " % (t), varFull) 
 
-if('ensi' in fileName):
+try:
   d = dsa.WrapDataObject(inputs[1].GetBlock(0))
-elif('pvd' in fileName):
+except:  
   d = dsa.WrapDataObject(inputs[1].VTKObject)
 x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=6)
 y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
 z = np.around(np.asarray(d.Points[:,2],dtype=np.double),decimals=zDec)
 ## SLICE GEOMETRY
-if('ensi' in fileName):
+try:
   out = dsa.WrapDataObject(inputs[0].GetBlock(0))
-elif('pvd' in fileName):
+except:  
   out = dsa.WrapDataObject(inputs[0].VTKObject)
 x_2d = np.around(np.asarray(out.Points[:,0],dtype=np.double),decimals=6)
 y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
@@ -551,7 +551,7 @@ for varName in varFull:
   #import numpy as np
   #from scipy.interpolate import griddata
   #inpFile = os.getcwd()+'/'+'inputFile.py'
-  #exec(open(inpFile).read())
+  #exec(open(inpFile).read(), {'__file__': inpFile})
 
   #varFull = inputs[0].PointData.keys()
   #for varName in varFull:

@@ -86,7 +86,7 @@ caseName	= sys.argv[1]
 airfoil 	= sys.argv[2]
 mode 		= sys.argv[3]
 
-indP = [6,7]
+#indP = [6,7]
 #indP = [288]
 #indP = [4,5,6,7]
 #indP = [0,1,2,3,4,5,6]
@@ -95,7 +95,7 @@ indP = [6,7]
 #indP = [5,6,7,8,9]
 #indP = [2,3,4,5,6,7,8,9,10,11]
 #indP = (np.arange(23,30)-1)
-#indP = [28,29]
+indP = [22,23,24]
 
 # LOAD AIRFOIL SPECIFIC FILES
 print('--|| ALYA INITIALIZING')

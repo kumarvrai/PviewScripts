@@ -3,9 +3,9 @@ import sys
 from paraview.simple import *
 pyVer = sys.version_info[0]
 if pyVer < 3:
-  execfile(initializeVars)
+  execfile(initializeVars,dict(__file__=initializeVars))
 else:
-  exec(open(initializeVars).read())
+  exec(open(initializeVars).read(), {'__file__': initializeVars})
 # LOAD SNAPSHOTS
 print('--|| ALYA :: INITIALIZING PYTHON VERSION:',pyVer)
 niaHome = '/home/u/ugo/kvishal/'
@@ -14,8 +14,11 @@ niaScrh = '/scratch/u/ugo/kvishal/research/0.Alya/'
 if read_fields_from_file:
   print("--|| ALYA :: READING ALYA ARRAYS", arrayList)
   startTime = time.time()
-  case = OpenDataFile(ID+IF)
-  case.PointArrays = arrayList
+  case = OpenDataFile(IF)
+  try:
+   case.PointArrays = arrayList
+  except:
+   print('--|| ALYA: LOADING DEFAULT VARIABLES')
   case.UpdatePipeline()
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   reader = GetActiveSource()
