@@ -122,10 +122,10 @@ POD_reconstruction_filename="""{}POD_reconstruction.vtu""".format(OD)
 M_DMD=2
 
 output_DMD_info=True
-DMD_info_filename="""{}dmd_info.csv""".format(OD)
+DMD_info_filename="""{}DMD_info.csv""".format(OD)
 
 output_DMD_build_coeffs=True
-DMD_build_coeffs_filename="""{}dmd_build_coeffs.npz""".format(OD)
+DMD_build_coeffs_filename="""{}DMD_build_coeffs.csv""".format(OD)
 
 output_DMD_spatial_modes=True
-DMD_sm_filename="""{}DMD_spatial_modes.vtu""".format(OD)
+DMD_sm_filename="""{}DMD_spatial_modes.vtm""".format(OD)

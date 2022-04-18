@@ -3,7 +3,7 @@ import sys
 from paraview.simple import *
 pyVer = sys.version_info[0]
 if pyVer < 3:
-  execfile(initializeVars,dict(__file__=initializeVars))
+  execfile(initializeVars)
 else:
   exec(open(initializeVars).read(), {'__file__': initializeVars})
 # LOAD SNAPSHOTS
@@ -354,6 +354,90 @@ if do_POD:
     else:
      sclArr.Arrays[0] = recon_field
     output.CellData.append(sclArr,'POD_{}_RECON_{}_{}'.format(MR,fieldname,ReconTime))
+#-----------------------------#     
+#-------DMD part--------------#     
+#-----------------------------#     
+if do_DMD:
+ print("----|| ALYA :: IMPLEMENT DMD CALCULATIONS")
+ startTime = time.time()
+ # if field is a vector, reshape the fields and corresponding volume weight
+ if field_is_vector:
+   #shp_vec = fields.shape
+   #shp_flat = (fields.shape[0],fields.shape[1]*fields.shape[2])
+   #fields = fields.reshape(shp_flat)
+   #V = np.tile(V,shp_vec[2])
+   shp_vec = fields.shape
+   shp_flat = (fields.shape[0],fields.shape[1]*fields.shape[2])
+   fields = fields.reshape(shp_flat)
+   V = np.dot(np.tile(wtsMat,(shp_vec[2],1)).T,np.tile(V,(shp_vec[2],1)))
+   V = V.T.reshape(shp_flat[1])
+
+ # DMD, I do not know which mode is important, so I have to discard modes_
+ DMD_res = mr.compute_DMD_arrays_snaps_method(fields.T,inner_product_weights=V)
+ print("----|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+
+ exact_modes = DMD_res.exact_modes; 
+ proj_modes = DMD_res.proj_modes; 
+ adjoint_modes = DMD_res.adjoint_modes; 
+ eigen_vals = DMD_res.eigvals
+ #eigen_vecs = POD_res.eigvecs; correlation_mat = POD_res.correlation_array
+
+ #modes_, ritz_vals, mode_norms, build_coeffs = \
+ # if field is a vector, reshape the fields, V and output matrix
+ if field_is_vector:
+   fields = fields.reshape(shp_vec)
+   #V = V[:shp_vec[1]]
+   V = np.asarray(V).T.reshape([shp_vec[1],shp_vec[2]])
+   fields = fields.reshape(shp_vec)
+ # sorting
+ eorder = np.argsort(mode_norms)[::-1]
+ # re-order the outputs
+ ritz_vals = ritz_vals[eorder]
+ mode_norms = mode_norms[eorder]
+ build_coeffs = build_coeffs[:,eorder]
+ #build the DMD_modes
+ DMD_modes = np.einsum('ijk,il->ljk', fields,build_coeffs[:,:M_DMD])
+
+ if output_DMD_info:
+   print("----|| ALYA :: WRITING DMD INFO TO ",DMD_info_filename)
+   # output modes info
+   header_str = 'DMD modes info\\n'
+   header_str += 'ritz_vals.real,ritz_vals.imag,growth_rate, frequency, mode_norms\\n'
+   header_str += r'AU,AU,1/s, Hz, AU'
+   dt = np.average(times[1:]-times[:-1]) #time step
+   np.savetxt(DMD_info_filename, \
+               np.c_[ np.real(ritz_vals), \
+                   np.imag(ritz_vals), \
+                   np.log(np.abs(ritz_vals))/dt, \
+                   np.angle(ritz_vals)/dt, \
+                   mode_norms], \
+               delimiter = ',', \
+               header = header_str)
+
+ if output_DMD_build_coeffs:
+   print("----|| ALYA :: WRITING DMD BUILD COEFF TO ",DMD_build_coeffs_filename)
+   np.savez(DMD_build_coeffs_filename, build_coeffs)
+
+# if output_DMD_spatial_modes:
+#   print("----|| ALYA :: APPEND DMD SPATIAL MODES TO ",DMD_sm_filename)
+#   #output to xml vtk unstructured grid file
+#   ugcd = geom.GetCellData()
+#   ugcd.Reset()
+#   ugcd.CopyAllOff()
+#   for i in range(ugcd.GetNumberOfArrays()):
+#       ugcd.RemoveArray(0)
+#   #import pi
+#   from numpy import pi
+#
+#   for i in range(M_DMD):
+#       ugcd.AddArray(dsa.numpyTovtkDataArray(np.abs(DMD_modes[i]),prefix+'_DMD_mode_abs_{}_{}'.format(    fieldname,i)))
+#       ugcd.AddArray(dsa.numpyTovtkDataArray(np.angle(DMD_modes[i])*180/pi,prefix+'_DMD_mode_angle_{}_    {}'.format(fieldname,i)))
+#
+#   ugw = vtk.vtkXMLUnstructuredGridWriter()
+#   ugw.SetInputDataObject(geom)
+#   ugw.SetFileName(DMD_sm_filename)
+#   ugw.Write()
+
 
   """ 
 
@@ -370,8 +454,9 @@ if do_POD:
 
 
   #print("----|| ALYA :: WRITING FILE", POD_sm_filename)
-  savePath = POD_sm_filename
-  SaveData(savePath, proxy=C2P)
+  if(do_POD):
+   savePath = POD_sm_filename
+   SaveData(savePath, proxy=C2P)
 #else:
 #  print('--|| ALYA :: READING FILE',ID+IF)
 #  ofr = vtk.vtkEnSightGoldReader()
