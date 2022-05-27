@@ -234,13 +234,13 @@ if("PINTERP" in method):
   for i in range(N):
     # create a new 'Transform'
     transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
+    # Properties modified on transform1.Transform
+    transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
     try:
       resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
     except:  
       resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1)
     resample_transforms.append(resampleWithDataset1)
-    # Properties modified on transform1.Transform
-    transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
     #data.append(dsa.WrapDataObject(servermanager.Fetch(resampleWithDataset1)).PointData['AVVEL'])
   print("--|| ALYA: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
   
@@ -266,6 +266,7 @@ xDec = 6
 zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
+exec(open(inpFile).read())
 exec(open(inpFile).read(), {'__file__': inpFile})
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
@@ -273,7 +274,7 @@ rank = c.GetLocalProcessId()
 t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 
 varFull = inputs[0].PointData.keys()
-varFull = [x for x in varFull if len(x) == 5]
+#varFull = [x for x in varFull if len(x) == 5]
 
 if(rank==0):
   print("----|| ALYA : ARRAYS AT TIME %.3f " % (t) ,varFull)
@@ -290,7 +291,7 @@ for varName in varFull:
      d = inputs[i+1].PointData[varName]
      avg = avg + d
  avg = avg/N
- output.PointData.append(avg,varName)
+ output.PointData.append(avg,varName0)
 """
   PF1.UpdatePipeline()
   print("--|| ALYA: SPANWISE AVERAGING DONE. TIME =",time.time()-startTime,'sec')
@@ -321,14 +322,17 @@ xDec = 6
 zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
-exec(open(inpFile).read(), {'__file__': inpFile})
+try:
+  exec(open(inpFile).read())
+except:
+  exec(open(inpFile).read(), {'__file__': inpFile})
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
 rank = c.GetLocalProcessId()
 
 t = inputs[1].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
 varFull = inputs[1].PointData.keys()
-varFull = [x for x in varFull if len(x) == 5]
+#varFull = [x for x in varFull if len(x) == 5]
 
 if(rank==0):
   print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
@@ -668,23 +672,51 @@ if('2D' in dim):
   ########### STREAMWISE AVERAGING ################
 if('1D' in dim):
   print("--|| ALYA :: GENERATING SLICE FOR STREAMWISE AVERAGE")
-  slice1 = Slice(Input=PF1)
-  slice1.SliceType = 'Plane'
-  slice1.SliceOffsetValues = [0.0]
-  ## init the 'Plane' selected for 'SliceType'
-  slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
-  ## Properties modified on slice1.SliceType
-  slice1.SliceType.Normal = [1.0, 0.0, 0.0]
-  slice1.UpdatePipeline()
+  startTime = time.time()
+  if("1DROT" in dim):
+    slice1 = Slice(Input=PF1)
+    slice1.SliceType = 'Plane'
+    slice1.SliceOffsetValues = [0.0]
+    ## init the 'Plane' selected for 'SliceType'
+    slice1.SliceType.Origin = [0.0, 0.0, 0.0]
+    ## Properties modified on slice1.SliceType
+    slice1.SliceType.Normal = [1.0, 0.0, 0.0]
+    slice1.UpdatePipeline()
+    #------------------------------#
+    slice1 = Clip(Input=slice1)
+    slice1.ClipType = 'Plane'
+    slice1.ClipType.Origin = [0.0, 0.0, 0.0]
+    slice1.ClipType.Normal = [0.0, 1.0, 0.0]
+    slice1.UpdatePipeline()
   
-  Ny = slice1.GetDataInformation().GetNumberOfPoints()
-  print("----|| ALYA :: WORKING WITH ",Ny," PLANAR POINTS")
+    Ny = int(slice1.GetDataInformation().GetNumberOfPoints())
+    print("----|| ALYA :: WORKING WITH ",Nplane," PLANAR POINTS")
+    
+    N = int(Nplane/Ny)
+    thMax = 2.0*np.pi; thMin = 0.0;
+    thMid = np.pi/2
+    xpos = np.arange(N)*(thMax-thMin)/(N-1)
+    print("----|| ALYA: WORKING WITH %d THETA-PLANES" % (len(xpos)))
+    print("----|| ALYA: DELTA-THETA = %f" % ((thMax-thMin)/(N-1)))
+  else:
+    print("--|| ALYA :: GENERATING SLICE FOR STREAMWISE AVERAGE")
+    slice1 = Slice(Input=PF1)
+    slice1.SliceType = 'Plane'
+    slice1.SliceOffsetValues = [0.0]
+    ## init the 'Plane' selected for 'SliceType'
+    slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
+    ## Properties modified on slice1.SliceType
+    slice1.SliceType.Normal = [1.0, 0.0, 0.0]
+    slice1.UpdatePipeline()
+    
+    Ny = slice1.GetDataInformation().GetNumberOfPoints()
+    print("----|| ALYA :: WORKING WITH ",Ny," PLANAR POINTS")
 
-  #N = int(Nplane/Ny)
-  xmid = (xmin+xmax)/2
-  xpos = np.around(np.asarray(np.arange(N)*(xmax-xmin)/(N-1),dtype=np.double),decimals=xDec)
-  print("----|| ALYA: WORKING WITH %d X-PLANES" % (len(xpos)))
-  print("----|| ALYA: DELTA-X = %f" % ((xmax-xmin)/(N-1)))
+    N = int(Nplane/Ny)
+    xmid = (xmin+xmax)/2
+    xpos = np.around(np.asarray(np.arange(N)*(xmax-xmin)/(N-1),dtype=np.double),decimals=xDec)
+    print("----|| ALYA: WORKING WITH %d X-PLANES" % (len(xpos)))
+    print("----|| ALYA: DELTA-X = %f" % ((xmax-xmin)/(N-1)))
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
   if("PINTERP" in method):
@@ -699,14 +731,15 @@ if('1D' in dim):
    for i in range(N):
    	# create a new 'Transform'
    	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
+   	if("1DROT" in dim):
+   	  transform1.Transform.Rotate = [0.0, 0.0, xpos[i]-thMid]
+   	else:
+   	  transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]
    	try:
    	  resampleWithDataset1=ResampleWithDataset(Input=PF1,Source=transform1)
    	except:  
    	  resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
    	resample_transforms.append(resampleWithDataset1)
-   	# Properties modified on transform1.Transform
-   	transform1.Transform.Translate = [xpos[i]-xmid, 0.0, 0.0]
-   	#data.append(dsa.WrapDataObject(servermanager.Fetch(resampleWithDataset1)).PointData['AVVEL'])
    print("--|| ALYA: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
    
    HideAll()
@@ -786,8 +819,9 @@ if('1D' in dim):
   #### write
   print("--|| ALYA: SAVING THE AVERAGED FILES")
   startTime = time.time()
+  savePath = casePath+"/AvgData_1D.vtm"
+  SaveData(savePath, proxy=PF1)
   savePath = casePath+"/AvgData_1D.csv"
-  #savePath = casePath+"/AvgData_1D.vtm"
   SaveData(savePath, proxy=PF1)
   print("----|| ALYA: 1D STATISTICS FILE WRITTEN AS: ",savePath)
   print("--|| ALYA: FILE SAVED. TIME =",time.time()-startTime,'sec')
