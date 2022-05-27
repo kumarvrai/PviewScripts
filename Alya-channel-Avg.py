@@ -98,7 +98,7 @@ if('NEK' in codeName):
   case.UpdatePipeline()
   print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
-if('OFOAM' in codeName):
+elif('OFOAM' in codeName):
   print("--|| OFOAM :: READING OPENFOAM ARRAYS")
   startTime = time.time()
   
@@ -154,6 +154,21 @@ if('OFOAM' in codeName):
   case = CellDatatoPointData(Input=case)
   case.UpdatePipeline()
   print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+elif("ALYA" in codeName):
+  print("--|| INFO :: READING ALYA ARRAYS")
+  startTime = time.time()
+  fileName = caseName+'.ensi.case'
+  case = OpenDataFile(fileName)
+  if(fileType == "LES"):
+    case.PointArrays = ['TURBU','YPLUS','AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+  elif(fileType == "DNS"):
+    case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+  else:
+    case.PointArrays = ['YPLUS', 'AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+else:      
+  raise ValueError('--|| ALYA ERROR :: CODENAME NOT RECONIZED.')
 
 print("--|| NEK :: TEMPORAL AVERAGING.")
 startTime = time.time()
@@ -188,7 +203,7 @@ print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 caseVarNames = case.PointData.keys()
 indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
 indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
-if('NEK' in codeName):
+if(any(code in codeName for code in ["NEK","ALYA"])):
   indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
   indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
   print("--|| NEK :: CALCULATING R-STRESSES")
@@ -410,7 +425,7 @@ if('1D' in avgDim):
   for i in range(N):
     # create a new 'Transform'
     transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
-    # Properties modified on transform1.Transform
+    ## Properties modified on transform1.Transform
     if("DFUSER" in geomType):
       transform1.Transform.Translate = [0.0, 0.0, xpos[i]-xmid]  
     else:  
@@ -420,19 +435,16 @@ if('1D' in avgDim):
     except:
       resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
     resample_transforms.append(resampleWithDataset1)
+    transform1.UpdatePipeline()
   print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
-  HideAll()
   
   ## create a new 'Programmable Filter'
   print("--|| NEK: X AVERAGING USING A PROGRAMMABLE FILTER")
   startTime = time.time()
   PF1 = ProgrammableFilter(Input=[slice1]+resample_transforms)
-  ### first input is the grid
-  ### the rest of them are data to be averaged
   PF1.Script = \
   """
   import numpy as np
-
   varFull = inputs[0].PointData.keys()
   print("----|| INFO : WORKING ON ",varFull)
   N=len(inputs)-1;
@@ -446,12 +458,12 @@ if('1D' in avgDim):
   """
   PF1.UpdatePipeline()
   print("--|| NEK: STREAMWISE AVERAGING DONE. TIME =",time.time()-startTime,'sec')
-  
+  #
   #### write
   print("--|| NEK: SAVING THE AVERAGED FILES")
   startTime = time.time()
-  savePath = casePath+"/AvgData_1D.vtm"
-  SaveData(savePath, proxy=PF1)
+  #savePath = casePath+"/AvgData_1D.vtm"
+  #SaveData(savePath, proxy=PF1)
   savePath = casePath+"/AvgData_1D.csv"
   SaveData(savePath, proxy=PF1)
   print("----|| NEK: 1D STATISTICS FILE WRITTEN AS: ",savePath)
