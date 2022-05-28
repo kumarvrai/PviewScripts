@@ -52,16 +52,16 @@ for instant in listOfInstants:
   # Compute and smooth the gradient of velocity
   #gradv = mesh.smooth(mesh.gradient(field['AVVEL']),iters=3)
   gradv = mesh.gradient(field['AVVEL'])
-  rstvw = field['RS_II'][:,1] - field['RS_II'][:,2]  
-  rstuv = -field['RS_IJ'][:,0]
+  T_VW1 = field['RS_II'][:,1] - field['RS_II'][:,2]  
+  T_VW2 = -field['RS_IJ'][:,1]
   vorti = pyAlya.postproc.vorticity(gradv)
 
 
   field['AVVGR'] = gradv
   field['GAVOR'] = mesh.gradient(vorti[:,0]) #gradient of x-vorticity
-  ggrsi = mesh.gradient(mesh.gradient(rstvw))
+  ggrsi = mesh.gradient(mesh.gradient(T_VW1))
   field['GGRSI'] = ggrsi[:,5]
-  ggrsi = mesh.gradient(mesh.gradient(rstuv))
+  ggrsi = mesh.gradient(mesh.gradient(T_VW2))
   field['GGRSJ'] = ggrsi[:,4] - ggrsi[:,8]
 
   #Write the fields
