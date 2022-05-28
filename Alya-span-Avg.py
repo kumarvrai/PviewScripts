@@ -48,6 +48,8 @@ if('BUD' not in file_fmt):
     case.PointArrays = ['TURBU','YPLUS','AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
    elif(model == "DNS"):
     case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+   elif(model == "SCALAR"):
+    case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY','AVTEM','AVTE2','AVTEV']
    else:
     case.PointArrays = ['YPLUS', 'AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
   elif("SAVG" in mode):
@@ -145,6 +147,25 @@ elif("FAVG" in mode):
                     % (caseVarNames[indXY],caseVarNames[indU],'X',caseVarNames[indU],'Y',\
                     caseVarNames[indU],'Y',caseVarNames[indU],'Z',\
                     caseVarNames[indU],'X',caseVarNames[indU],'Z')
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+   if('SCALAR' in model): 
+    indT = int([i for i, s in enumerate(caseVarNames) if 'AVTEM' in s][0]);
+    indTX = int([i for i, s in enumerate(caseVarNames) if 'AVTE2' in s][0]);
+    indTY = int([i for i, s in enumerate(caseVarNames) if 'AVTEV' in s][0]);
+    print("--|| ALYA :: CALCULATING SCALAR RSS")
+    startTime = time.time()
+    # CALCULATE Scalar-RStresses
+    case = Calculator(Input=case)
+    case.ResultArrayName = "RSSTT"
+    case.Function = "%s - %s"% (caseVarNames[indTX],caseVarNames[indT])
+    case.UpdatePipeline()
+    case = Calculator(Input=case)
+    case.ResultArrayName = "RSSTV"
+    case.Function = "%s - %s_%s*%s*iHat - %s_%s*%s*jHat - %s_%s*%s*kHat" \
+                    % (caseVarNames[indTY],caseVarNames[indU],'X',caseVarNames[indT],\
+                    caseVarNames[indU],'Y',caseVarNames[indT],\
+                    caseVarNames[indU],'Z',caseVarNames[indT])
     case.UpdatePipeline()
     print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
    # GRADIENT CALC
@@ -724,10 +745,6 @@ if('1D' in dim):
    startTime = time.time()
    resample_transforms=list();
    data=list();
-   
-   
-   print("--|| ALYA: CREATING X TRANSFORMATIONS")
-   startTime = time.time()
    for i in range(N):
    	# create a new 'Transform'
    	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
@@ -741,8 +758,6 @@ if('1D' in dim):
    	  resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=PF1,DestinationMesh=transform1)
    	resample_transforms.append(resampleWithDataset1)
    print("--|| ALYA: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
-   
-   HideAll()
    
    ## create a new 'Programmable Filter'
    print("--|| ALYA: X AVERAGING USING A PROGRAMMABLE FILTER")
