@@ -57,6 +57,14 @@ def calcSpectra(f, nWindows, iPeriodic):
   pfks[0] = 0.5*pfks[0]
   
   return afks, pfks
+
+def closest_node(node, nodes):
+    nodes = np.asarray(nodes)
+    dist_2 = np.sum((nodes - node)**2, axis=1)
+    indMin = np.argmin(np.sqrt(dist_2),axis=None)
+    return indMin, np.amin(np.sqrt(dist_2),axis=None)
+
+
 #######################################################################
 
 home = expanduser("~")
@@ -81,12 +89,17 @@ linestyles = [
      ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
      ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
      ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))]     
+mpl.rcParams['mathtext.fontset'] = 'cm' 
+mpl.rcParams['mathtext.rm'] = 'serif'
 
 caseName	= sys.argv[1]
 airfoil 	= sys.argv[2]
-mode 		= sys.argv[3]
+side 		= sys.argv[3];
+mode 		= sys.argv[4]
 
-#indP = [6,7]
+#indP = [0,1,2]
+#indP = [4]
+#indP = [8,10,12,14]
 #indP = [288]
 #indP = [4,5,6,7]
 #indP = [0,1,2,3,4,5,6]
@@ -95,15 +108,19 @@ mode 		= sys.argv[3]
 #indP = [5,6,7,8,9]
 #indP = [2,3,4,5,6,7,8,9,10,11]
 #indP = (np.arange(23,30)-1)
-indP = [22,23,24]
+#indP = [22,23,24]
+#indP = [480,481,482,483] # RLE2 - TE-SP (0.2,0.3,0.4,0.5) location
+#indP = [484,485,486,487] # RLE2 - TE-SP (0.6,0.7,0.8,0.9) location
+indP = [235,467] #RLE1-5 TE (FP,SP) at x/c=0.9
+#indP = [236,468] #RLE1-5 TE (FP,SP) at x/c=0.95
 
 # LOAD AIRFOIL SPECIFIC FILES
 print('--|| ALYA INITIALIZING')
 plt.close("all")
 lw = 2;
-SMALL_SIZE = 12
-MEDIUM_SIZE = 16
-BIGGER_SIZE = 20
+SMALL_SIZE = 20
+MEDIUM_SIZE = 24
+BIGGER_SIZE = 28
 plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
@@ -120,6 +137,17 @@ elif('4412' in airfoil):
 else:
   sys.exit("--||Alya (ERROR): AIRFOIL NOT IN THE LIST")
 
+if('ss' in side):
+  coordAir = np.loadtxt(fAirU, delimiter=',');
+else:
+  coordAir = np.loadtxt(fAirL, delimiter=',')
+
+# INTERPOLATION ON SUCTION SIDE
+thAir = np.arctan2(np.diff(coordAir[:,1]),np.diff(coordAir[:,0]))
+airLen = len(coordAir)
+coordMid = 0.5*(coordAir[0:airLen-1,0]+coordAir[1:airLen,0])
+Fth = interp1d(coordMid,thAir)
+
 print('--|| ALYA :: READING AIRFOIL DATA.')
 stime = time.time()
 coordAirU = np.loadtxt(fAirU, delimiter=',')
@@ -132,7 +160,7 @@ witPoints = np.loadtxt('./witness-nastin.dat')
 print('--|| ALYA :: DONE. TIME=',time.time()-stime)
 
 nWit = len(witPoints)
-z = np.unique(witPoints[:,2]);
+z = np.unique(witPoints[:,-1]);
 nz = int(nWit/len(z))
 indPLabel = range(len(indP));
 print('--|| ALYA :: PROCESSING', nWit, 'TOTAL WITNESS POINTS')
@@ -198,13 +226,13 @@ else:
     print('--|| ALYA :: READING WITNESS DATA.')
     stime = time.time()
     if('U' in calcVar):
-      time_data, wit_data = cfd.ExportReadProbe('./naca-VELOX.wit.bin')
+      time_data, wit_data = cfd.ExportReadProbe('./%s-VELOX.wit.bin'%(caseName))
     elif('V' in calcVar):
-      time_data, wit_data = cfd.ExportReadProbe('./naca-VELOY.wit.bin')
+      time_data, wit_data = cfd.ExportReadProbe('./%s-VELOY.wit.bin'%(caseName))
     elif('W' in calcVar):
-      time_data, wit_data = cfd.ExportReadProbe('./naca-VELOZ.wit.bin')
+      time_data, wit_data = cfd.ExportReadProbe('./%s-VELOZ.wit.bin'%(caseName))
     elif('P' in calcVar):
-      time_data, wit_data = cfd.ExportReadProbe('./naca-PRESS.wit.bin')
+      time_data, wit_data = cfd.ExportReadProbe('./%s-PRESS.wit.bin'%(caseName))
     else:
       raise ValueError('ALYA ERROR :: VARIABLE NOT SPECIFIED!')
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
@@ -259,29 +287,31 @@ else:
           f = np.linspace(freq_min, freq_max, nout)
           pgram = signal.lombscargle(tSignal, ySignal, f)
         elif('FFT' in mode):
-          print('--|| ALYA :: INTERPOLATE CONSTANT TIME.')
-          fInterp = interp1d(tSignal,ySignal);
           delta_t = np.amax(np.diff(tSignal),axis=None)
           s_rate = 1.0/delta_t
           print('----|| INFO :: SAMPLING FREQ = %.2f'% s_rate)
-          Nt = int((np.amax(tSignal,axis=None)-np.amin(tSignal,axis=None))/delta_t)+1
-          print('----|| INFO :: INTERPOLATING ON %d POINTS'%(Nt))
-          tSignal = np.linspace(np.amin(tSignal,axis=None),np.amax(tSignal,axis=None),Nt);
-          ySignal = fInterp(tSignal)
-          print('--|| ALYA :: DONE. TIME=',time.time()-stime)
-          amp,pgram = calcSpectra(ySignal, 10, 0)
+          if('INTERPFFT' in mode):
+            Nt = int((np.amax(tSignal,axis=None)-np.amin(tSignal,axis=None))/delta_t)+1
+            print('----|| INFO :: INTERPOLATING ON %d POINTS'%(Nt))
+            print('--|| ALYA :: INTERPOLATE CONSTANT TIME.')
+            fInterp = interp1d(tSignal,ySignal);
+            tSignal = np.linspace(np.amin(tSignal,axis=None),np.amax(tSignal,axis=None),Nt);
+            ySignal = fInterp(tSignal)
+            print('--|| ALYA :: DONE. TIME=',time.time()-stime)
+          hann_size = 2    
+          amp,pgram = calcSpectra(ySignal, hann_size, 0)
           #pgram = np.fft.fft(ySignal)
           N = len(pgram); print('--|| INFO :: FFT LENGTH = %d'%N) 
           n = np.arange(N); 
           T = float(N)/s_rate; 
-          f = n/T
+          f = 0.5*n/T
           #plt.stem(f, np.abs(pgram), 'b', \
           # markerfmt=" ", basefmt="-b")
           #plt.ylabel(r'$P_{u^\prime u^\prime}$')
           #ax.set(xlim=(0, 10))
         else:
           raise ValueError('ALYA ERROR :: METHOD TO CALC PSD NOT SPECIFIED!')
-        pgram = 10**i*(pgram/np.amax(pgram,axis=None))
+        pgram = 100**i*(pgram/np.amax(pgram,axis=None))
         plt.plot(f, pgram, markevery=markFreq,linewidth=0.5,label=lab)
         if('U' in calcVar):
           plt.ylabel(r'$E_{u^\prime u^\prime}$')
@@ -297,7 +327,13 @@ else:
         #plt.gca().set_xlim(right=1000);
         #ax.annotate(lab, xy=(0.05, 1.1), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
         #                horizontalalignment='left', verticalalignment='top')
-        ax.legend()
+        ax.legend(loc="lower left")
+        #fig.legend(handles,     # The line objects
+        #             labels,
+        #             loc="upper right",   # Position of legend	i
+        #             bbox_to_anchor=(0.91,0.52),
+        #             ncol = 2, fancybox=True,shadow=True
+        #            )
         if(i==0):
          plt.plot(f[np.where(f>100)],10.0*np.power(f[np.where(f>100)],-5.0/3),'k--')
         elif(i==len(indP)-1):
@@ -357,20 +393,20 @@ else:
     print('--|| ALYA :: READING WITNESS DATA.')
     stime = time.time()
     if('UU' in calcVar):
-      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOX.wit.bin')
+      time_data, wit_data_0 = cfd.ExportReadProbe('./%s-VELOX.wit.bin'%(caseName))
       wit_data_1 = wit_data_0;
     elif('VV' in calcVar):
-      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOY.wit.bin')
+      time_data, wit_data_0 = cfd.ExportReadProbe('./%s-VELOY.wit.bin'%(caseName))
       wit_data_1 = wit_data_0;
     elif('WW' in calcVar):
-      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOZ.wit.bin')
+      time_data, wit_data_0 = cfd.ExportReadProbe('./%s-VELOZ.wit.bin'%(caseName))
       wit_data_1 = wit_data_0;
     elif('PP' in calcVar):
-      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-PRESS.wit.bin')
+      time_data, wit_data_0 = cfd.ExportReadProbe('./%s-PRESS.wit.bin'%(caseName))
       wit_data_1 = wit_data_0;
     elif('UV' in calcVar):
-      time_data, wit_data_0 = cfd.ExportReadProbe('./naca-VELOX.wit.bin')
-      time_data, wit_data_1 = cfd.ExportReadProbe('./naca-VELOY.wit.bin')
+      time_data, wit_data_0 = cfd.ExportReadProbe('./%s-VELOX.wit.bin'%(caseName))
+      time_data, wit_data_1 = cfd.ExportReadProbe('./%s-VELOY.wit.bin'%(caseName))
     else:
       raise ValueError('ALYA ERROR :: VARIABLE NOT SPECIFIED!')
     print('----|| INFO :: %d TIME VALUES RANGE %.2f-%.2f'%(len(time_data),time_data[0], time_data[-1]))
@@ -417,10 +453,53 @@ else:
         right=False,         # ticks along the top edge are off
         labelleft=True,
         labelright=False) # labels along the bottom edge are off
-    axs.legend(loc="upper right",   # Position of legend	i
+    axs.legend(loc="upper right",   # Position of legend
                bbox_to_anchor=(0.92,0.92),
                ncol = 2, fancybox=True
               )
+  elif("BACKFLOW" in mode):
+    import pandas as pd
+    import seaborn as sns
+    dcolor = ['Blues', 'Reds', 'Greens']
+    lcolor = ['b', 'r', 'g']
+    print('--|| INFO :: BACK-FLOW CORRELATIONS')
+    print('--|| ALYA :: READING WITNESS DATA.')
+    stime = time.time()
+    time_data, wit_data_0 = cfd.ExportReadProbe('./%s-VELOX.wit.bin'%(caseName))
+    time_data, wit_data_1 = cfd.ExportReadProbe('./%s-VELOY.wit.bin'%(caseName))
+    #rows,clms = (len(indP)//2,2)
+    #fig, axs = plt.subplots(nrows=rows,ncols=clms)
+    #axs = axs.reshape(-1)
+    for j,i in enumerate(indP):
+      x_wit,y_wit,z_wit = witPoints[i,:]
+      if(np.logical_and(x_wit>0.0,x_wit<1.0)):
+        indMin,pdist = closest_node((x_wit,y_wit), coordAir);
+        theta = Fth(coordAir[indMin,0])
+      else:
+        theta=0.0
+      lab = "$P_{"+str(i+1)+"}$";
+      print("--|| ALYA :: PROCESSING (X,Y,Z)=(%.2f,%.2f,%.3f)"% (x_wit, y_wit, z_wit));
+      u0 = wit_data_0[:,i+1]; 
+      v0 = wit_data_1[:,i+1];
+      u_rms = np.sqrt(np.mean(np.square(u0)));
+      v_rms = np.sqrt(np.mean(np.square(v0)));
+      ut = (u0*np.cos(theta)+v0*np.sin(theta))/u_rms;
+      vn = (-u0*np.sin(theta)+v0*np.cos(theta))/v_rms;
+      df = pd.DataFrame(np.transpose((ut,vn)), columns = ['$u_t/u_{rms}$','$v_n/v_{rms}$'])
+      if(j==0):
+        graph = sns.jointplot(data=df, x="$u_t/u_{rms}$", y="$v_n/v_{rms}$", cmap=dcolor[j], kind="kde",\
+                marginal_kws={"color":lcolor[j], "shade":True}, shade=True, label=lab)
+      else:
+        graph.x = df['$u_t/u_{rms}$'];
+        graph.y = df['$v_n/v_{rms}$'];
+        graph.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=True, label=lab)
+        graph.plot_marginals(sns.kdeplot, color=lcolor[j], shade=True, legend=False)
+      #exit()
+      #axs[j].plot(u0/u_rms, v0/v_rms, linewidth=0.5, color='black', label=lab)
+      #plt.xlabel(r'$u/u_{rms}$');
+      #plt.ylabel(r'$v/v_{rms}$')
+
+
 #plt.show()
 savePath = casePath+'/plot_'+mode.lower()+'_'
 if('PSD' in mode):
@@ -429,6 +508,10 @@ if('PSD' in mode):
   savePath = savePath+listStr+'_'
 elif('TPCORR' in mode):
   savePath = savePath+calcVar.lower()+'_'
+elif('BACKFLOW' in mode):
+  listP = [str(pt) for pt in indP]
+  listStr = "_".join(listP)
+  savePath = savePath+listStr+'_JPROB_'
 savePath = savePath+airfoil
 savePath = savePath+'.png'
 print('----|| INFO :: SAVING FIGURE AS ',savePath)
