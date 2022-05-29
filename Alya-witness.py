@@ -114,6 +114,8 @@ mode 		= sys.argv[4]
 indP = [235,467] #RLE1-5 TE (FP,SP) at x/c=0.9
 #indP = [236,468] #RLE1-5 TE (FP,SP) at x/c=0.95
 
+#indP = [579,291] #RLE2-5 TE (FP,SP) at x/c=0.9
+
 # LOAD AIRFOIL SPECIFIC FILES
 print('--|| ALYA INITIALIZING')
 plt.close("all")
@@ -478,22 +480,49 @@ else:
       else:
         theta=0.0
       lab = "$P_{"+str(i+1)+"}$";
-      print("--|| ALYA :: PROCESSING (X,Y,Z)=(%.2f,%.2f,%.3f)"% (x_wit, y_wit, z_wit));
+      print("--|| ALYA :: POINT (%.2f,%.2f,%.3f) AT d=%.3f"% (x_wit,y_wit,z_wit,pdist));
       u0 = wit_data_0[:,i+1]; 
       v0 = wit_data_1[:,i+1];
-      u_rms = np.sqrt(np.mean(np.square(u0)));
-      v_rms = np.sqrt(np.mean(np.square(v0)));
-      ut = (u0*np.cos(theta)+v0*np.sin(theta))/u_rms;
-      vn = (-u0*np.sin(theta)+v0*np.cos(theta))/v_rms;
-      df = pd.DataFrame(np.transpose((ut,vn)), columns = ['$u_t/u_{rms}$','$v_n/v_{rms}$'])
+      ut = (u0*np.cos(theta)+v0*np.sin(theta));
+      vn = (-u0*np.sin(theta)+v0*np.cos(theta));
+      ut = ut-np.mean(ut,axis=None)
+      vn = vn-np.mean(vn,axis=None)
+      u_rms = np.sqrt(np.mean(np.square(ut)));
+      v_rms = np.sqrt(np.mean(np.square(vn)));
+      n_total = len(ut)
+      Q1 = 100.0*float(len(np.where(np.logical_and(ut>0.0,vn>0.0))[0]))/n_total
+      Q2 = 100.0*float(len(np.where(np.logical_and(ut<0.0,vn>0.0))[0]))/n_total
+      Q3 = 100.0*float(len(np.where(np.logical_and(ut<0.0,vn<0.0))[0]))/n_total
+      Q4 = 100.0*float(len(np.where(np.logical_and(ut>0.0,vn<0.0))[0]))/n_total
+      print("--|| ALYA :: (Q1,Q2,Q3,Q4)=(%.0f,%.0f,%.0f,%.0f)"% (Q1, Q2, Q3, Q4));
+      df = pd.DataFrame(np.transpose((ut/u_rms,vn/v_rms)), columns=['$u_t/u_t^{rms}$','$v_n/v_n^{rms}$'])
+      plt_cbar = True
+      plt_shade = True
       if(j==0):
-        graph = sns.jointplot(data=df, x="$u_t/u_{rms}$", y="$v_n/v_{rms}$", cmap=dcolor[j], kind="kde",\
-                marginal_kws={"color":lcolor[j], "shade":True}, shade=True, label=lab)
+        kdeplot = sns.jointplot(data=df, x="$u_t/u_t^{rms}$", y="$v_n/v_n^{rms}$", cmap=dcolor[j], \
+                kind="kde", marginal_kws={"color":lcolor[j], "shade":plt_shade}, shade=plt_shade, \
+                cbar=plt_cbar, cbar_kws={"ticks":[0.0,0.1,0.2]}, label=lab)
+        if(plt_cbar):
+          plt.subplots_adjust(left=0.18, right=0.9, top=0.9, bottom=0.15)  # shrink fig so cbar is visible
+          # get the current positions of the joint ax and the ax for the marginal x
+          pos_joint_ax = kdeplot.ax_joint.get_position()
+          pos_marg_x_ax = kdeplot.ax_marg_x.get_position()
+          # reposition the joint ax so it has the same width as the marginal x ax
+          kdeplot.ax_joint.set_position([pos_joint_ax.x0,pos_joint_ax.y0,pos_marg_x_ax.width,pos_joint_ax.height])
+          # reposition the colorbar using new x positions and y positions of the joint ax
+          kdeplot.fig.axes[-1].set_position([.87, pos_joint_ax.y0, .05, pos_joint_ax.height/3])
       else:
-        graph.x = df['$u_t/u_{rms}$'];
-        graph.y = df['$v_n/v_{rms}$'];
-        graph.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=True, label=lab)
-        graph.plot_marginals(sns.kdeplot, color=lcolor[j], shade=True, legend=False)
+        kdeplot.x = df['$u_t/u_t^{rms}$'];
+        kdeplot.y = df['$v_n/v_n^{rms}$'];
+        kdeplot.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=plt_shade, \
+              cbar= plt_cbar, cbar_kws={"ticks":[0.0,0.1,0.2]}, label=lab)
+        if(plt_cbar):
+          ## reposition the joint ax so it has the same width as the marginal x ax
+          kdeplot.ax_joint.set_position([pos_joint_ax.x0,pos_joint_ax.y0,pos_marg_x_ax.width,pos_joint_ax.height])
+          # reposition the colorbar using new x positions and y positions of the joint ax
+          kdeplot.fig.axes[-1].set_position([.87, 0.55, .05, pos_joint_ax.height/3])
+        kdeplot.plot_marginals(sns.kdeplot, color=lcolor[j], shade=plt_shade, legend=False)
+      kdeplot.fig.suptitle('$x/c=%.1f$'%x_wit)
       #exit()
       #axs[j].plot(u0/u_rms, v0/v_rms, linewidth=0.5, color='black', label=lab)
       #plt.xlabel(r'$u/u_{rms}$');
