@@ -18,6 +18,7 @@ else:
 import modred as mr
 #####################[IOData]###########################
 CODE=sys.argv[5]
+MODE=sys.argv[6]
 print('--|| ALYA : WORKING WITH ',CODE)
 # working directory and data filename
 niaHome = '/home/u/ugo/kvishal/'
@@ -52,30 +53,45 @@ if('TKENORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([0, 1, 1, 1])
+ arrayList = varName_code
 elif('UNORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([0, 1, 0, 0])
+ arrayList = varName_code
 elif('VNORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([0, 0, 1, 0])
-elif('PRESNORM' in fieldname.upper()):
+ arrayList = varName_code
+elif('PNORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([1, 0, 0, 0])
+ arrayList = varName_code
+elif('VORTINORM' in fieldname.upper()):
+ varName_code = ['PRESS','VELOC']
+ varName_calc = ['VORTI']
+ wtsMat = np.array([0, 0, 1])
+ arrayList = []
 elif('BERNORM' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = []
  wtsMat = np.array([1, 0.5, 0.5, 0.5])
+ arrayList = varName_code
 elif('COMPND' in fieldname.upper()):
  varName_code = ['PRESS','VELOC']
  varName_calc = ['RS_II','RS_IJ']
  wtsMat = np.array([0, 1, 1, 1, 0, 0, 0, 0, 0, 0])
+ arrayList = varName_code
+elif('UVPOS' in fieldname.upper()):
+ varName_code = ['VELOC']
+ varName_calc = ['UVPOS']
+ wtsMat = np.array([0, 0, 0, 1])
+ arrayList = varName_code
 else:
  raise Exception('--|| ALYA : PROVIDED VARAIABLE IDENTIFIER MISSING ')
 
-arrayList = varName_code
 print('--|| ALYA : DATASET IS',DIM,'DIMENSION')
 # vector or not
 field_is_vector = int(sys.argv[4])
@@ -84,19 +100,25 @@ prefix="Re40_"
 # True= read data from case files; 
 # False= read data from fields.npz
 read_fields_from_file = True
-calculate_pod_slice   = True
+calculate_pod_slice   = False
+box_clip              = True
 # Variable interpolation form= %(NAME)s is available
 fields_filename="""{}fields_{}.npz""".format(OD,fieldname)
 geom_filename="""{}Geometry.vtu""".format(OD)
 times_filename="""{}times.npy""".format(OD)
 
-do_POD = True
-do_DMD = False
+do_POD = False; do_DMD=False;
+if('POD' in MODE):
+  do_POD = True
+elif('DMD' in MODE):  
+  do_DMD = True
+else:
+ raise Exception('--|| ALYA : PROVIDED MODE IDENTIFIER MISSING ')
 #####################[POD]###########################
 # accuracy determines how many modes will be calculated.
 accuracy=0.9999
 # spatial mode to be calculated, M=0 means determined by program according to accuracy
-M = 30
+M_POD = 20
 #
 subtractAvg = True
 #
@@ -112,8 +134,9 @@ output_POD_spatial_modes=True
 POD_sm_filename="""{}POD_spatial_modes.vtm""".format(OD)
 
 doReconstruction = False
+doFullRecon = False
 # reconstruct output numbers
-MR = 5
+MR_POD = 2
 ReconTime= (t0+tf)/2.0
 POD_reconstruction_filename="""{}POD_reconstruction.vtu""".format(OD)
 
