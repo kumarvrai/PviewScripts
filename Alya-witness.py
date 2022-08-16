@@ -3,7 +3,7 @@ import time
 import sys
 
 #os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
-
+import contextlib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +12,53 @@ from os.path import expanduser
 from scipy.interpolate import interp1d
 
 #######################################################################
+@contextlib.contextmanager
+def plot_kde_as_log(base=10, support_threshold=1e-4):
+    """Context manager to render density estimates on a logarithmic scale.
+    Usage:
+
+        with plot_kde_as_log():
+          sns.jointplot(x='x', y='y', data=df, kind='kde')
+    """
+    #old_stats = sns.distributions._has_statsmodels
+    #old_univar = sns.distributions._scipy_univariate_kde
+    #old_bivar = sns.distributions._scipy_bivariate_kde
+    old_call = sns._statistics.KDE.__call__
+
+    #sns.distributions._has_statsmodels = False
+    def log_clip_fn(v):
+      #global n_total
+      #v *= n_total; 
+      #v /= np.amax(v,axis=None) 
+      v = np.log10(np.clip(v, support_threshold, np.inf))
+      v -= np.log10(support_threshold)
+      v /= np.log10(base)
+      return v
+    def new_call(*args, **kwargs):
+      density, support = old_call(*args, **kwargs)
+      density = log_clip_fn(density)
+      return density, support
+    #def new_univar(*args, **kwargs):
+    #  x, y = old_univar(*args, **kwargs)
+    #  y = log_clip_fn(y)
+    #  return x, y
+    #def new_bivar(*args, **kwargs):
+    #  x, y, z = old_bivar(*args, **kwargs)
+    #  z = log_clip_fn(z)
+    #  return x, y, z
+    
+    #sns.distributions._scipy_univariate_kde = new_univar
+    #sns.distributions._scipy_bivariate_kde = new_bivar
+    sns._statistics.KDE.__call__ = new_call
+
+    try:
+      yield
+    finally:
+      sns._statistics.KDE.__call__ = old_call
+      #sns.distributions._has_statsmodels = old_stats
+      #sns.distributions._scipy_univariate_kde = old_univar
+      #sns.distributions._scipy_bivariate_kde = old_bivar
+
 def calcSpectra(f, nWindows, iPeriodic):
   n = len(f)
   n = n//nWindows
@@ -97,7 +144,8 @@ airfoil 	= sys.argv[2]
 side 		= sys.argv[3];
 mode 		= sys.argv[4]
 
-#indP = [0,1,2]
+#indP = [0,1,3,5]
+#indP = [0,1,2,3,4]
 #indP = [4]
 #indP = [8,10,12,14]
 #indP = [288]
@@ -109,12 +157,31 @@ mode 		= sys.argv[4]
 #indP = [2,3,4,5,6,7,8,9,10,11]
 #indP = (np.arange(23,30)-1)
 #indP = [22,23,24]
+#indP = [581,584] #SLE-5 (0.6,0.9) to compare 
+#indP = [288,290,291] #TBL-5 (0.6,0.9) to compare 
 #indP = [480,481,482,483] # RLE2 - TE-SP (0.2,0.3,0.4,0.5) location
 #indP = [484,485,486,487] # RLE2 - TE-SP (0.6,0.7,0.8,0.9) location
-indP = [235,467] #RLE1-5 TE (FP,SP) at x/c=0.9
+#indP = [424,464]   #RLE1-5 (FP,SP) at x/c=0.2
+#indP = [202,442]  #RLE1-5 (FP,SP) at x/c=0.6
+#indP = [235,427] #RLE1-5 (FP,SP) at x/c=0.9
 #indP = [236,468] #RLE1-5 TE (FP,SP) at x/c=0.95
+#indP = [235,467] #RLE1-5 TE (FP,SP) at x/c=0.9
+#indP = [204,96]  #RLE1-10 LE (FP,SP) at x/c=0.2
 
-#indP = [579,291] #RLE2-5 TE (FP,SP) at x/c=0.9
+#indP = [440,384] #RLE2-5 (FP,SP) at x/c=0.2
+#indP = [450,346] #RLE2-5 (FP,SP) at x/c=0.6
+#indP = [555,331] #RLE2-5 (FP,SP) at x/c=0.9
+#indP = [580,292] #RLE2-5 TE (FP,SP) at x/c=0.95
+#indP = [869,437]  #RLE2-10 TE (FP,SP) at x/c=0.7
+#indP = [481,865]  #RLE2-10 LE (FP,SP) at x/c=0.3
+#indP = [480,360]  #RLE2-10 LE (FP,SP) at x/c=0.2
+
+#-------FP-SP----------#
+# Matching with beta plots
+# RLE1-5 F @ z/c=0.04; S @ z/c=0.021
+#indP = [232,234,235,120,122,123] #RLE1-5 [F,F,F,S,S,S] 
+
+x_loc = [0.9, 0.95]
 
 # LOAD AIRFOIL SPECIFIC FILES
 print('--|| ALYA INITIALIZING')
@@ -223,7 +290,7 @@ if("SHOWPTS" in mode):
 else:  
   
   if(any(string in mode for string in ["PSD","THIS"])):
-    calcVar = 'V'
+    calcVar = 'P'
     print('--|| INFO :: PSD CALCULATIONS ON %s'% calcVar)
     print('--|| ALYA :: READING WITNESS DATA.')
     stime = time.time()
@@ -248,12 +315,14 @@ else:
     tM = np.maximum.accumulate(time_data)
     t, ind = np.unique(tM, return_index=True)
     print('----|| INFO :: UNIQUE TIME ARRAY SIZE=',np.size(t))
-    markFreq = int(np.amax((np.floor(len(t)/20),1),axis=None))
+    totalMarkPts = 1000;
+    markFreq = int(np.amax((np.floor(len(t)/totalMarkPts),1),axis=None))
     print('--|| ALYA :: DONE. TIME=',time.time()-stime)
     for (i,j) in enumerate(indP):
       print('----|| INFO :: PROCESSING POINT %d, x,y,z='%j, witPoints[j,:])
       #lab = r'$P_{'+str(j+1)+'}$';
-      lab = r'$x/c=%.1f, \, y/c=%.2f$'%(witPoints[j,0],witPoints[j,1]);
+      #lab = r'$x/c=%.3f, \, y/c=%.2f$'%(witPoints[j,0],witPoints[j,1]);
+      lab = r'$x/c=%.3f$'%(witPoints[j,0]);
       if('ZAVG' in mode):
         print('----|| INFO :: PERFORMING SPANWISE AVERAGING')
         z_per_index = np.arange(j,nWit,nz)
@@ -261,26 +330,37 @@ else:
       else:
         dataPoint = wit_data[:,j]; #Extract data
       print('----|| INFO :: WITNESS ARRAY SIZE=',np.shape(dataPoint))
+      backFlow = 100.0*float(len(np.where(dataPoint<0.0)[0]))/len(dataPoint)
+      print('----|| INFO :: PERCENT BACKFLOW=', backFlow)
       dataPoint = dataPoint[ind];
       print('----|| INFO :: UNIQUE WITNESS ARRAY SIZE=',np.shape(dataPoint))
       tSignal = t;
       ySignal = dataPoint-np.mean(dataPoint,axis=None)
       #ax = plt.subplot(len(indP), 1, i+1)
-      ax = plt.subplot(1, 1, 1)
+      ax = plt.gca()
       if("THIS" in mode):
         print('--|| ALYA :: CALCULATE TIME HISTORY (THIS).')
         N = 1000;
         y1 = dataPoint - np.convolve(dataPoint, np.ones(N)/N, mode='same')
-
-        plt.plot(tSignal, dataPoint, 'k',markevery=markFreq,linewidth=0.5,label=lab)
-        #plt.plot(t, y1, 'r--',markevery=markFreq,linewidth=0.5,label=lab)
-        ax.annotate(lab, xy=(0.05, 1.2), xycoords='axes fraction', fontsize=MEDIUM_SIZE,
-                        horizontalalignment='left', verticalalignment='top')
+        #ax = plt.subplot(211)
+        plt.plot(tSignal, dataPoint, '.', markersize=2)
+        plt.plot(tSignal, np.mean(dataPoint,axis=None)*np.ones(len(tSignal)), 'k'+ls[i], linewidth=1.75)
+        plt.plot(tSignal, 0.0*dataPoint, 'k--', linewidth=1.5)
+        plt.tight_layout()
         if(i==len(indP)-1):
          plt.xlabel(r'$tU_o/c$');
-         #ylab = r'$\left(u-\overline{U}\right)/U_o$'
-         ylab = r'$u/U_o$'
-         ax.annotate(ylab, xy=(0.02, 0.55),xycoords='figure fraction',fontsize=MEDIUM_SIZE,rotation=90)
+         ylab = r'$%s/U_o$'% calcVar.lower()
+         plt.ylabel(ylab);
+        ##---subplot 2------#
+        #ax = plt.subplot(212)
+        #plt.plot(tSignal, ySignal, '.', markersize=5)
+        #plt.plot(tSignal, 0.0*dataPoint, 'k--', linewidth=1.0)
+        #if(i==len(indP)-1):
+        # plt.xlabel(r'$tU_o/c$');
+        # ylab = r'$%s''/U_o$'% calcVar.lower()
+        # plt.ylabel(ylab);
+        plt.tight_layout()
+        plt.suptitle(lab)
       elif("PSD" in mode):
         print('--|| ALYA :: CALCULATE POWER SPECTRA (PSD).')
         if('LOMB' in mode):
@@ -462,8 +542,11 @@ else:
   elif("BACKFLOW" in mode):
     import pandas as pd
     import seaborn as sns
-    dcolor = ['Blues', 'Reds', 'Greens']
-    lcolor = ['b', 'r', 'g']
+    global n_total
+    dcolor = ['Reds', 'Blues_r', 'Greys_r', 'Blues', 'Greens']
+    lcolor = ['r', 'b', 'k', 'g']
+    bwidth = 2.0; barScale=0; # band width(controls smoothing), log-scaling
+    print('--|| INFO :: BANDWIDTH=%.1f, LOGSCALE=%d'%(bwidth,barScale))
     print('--|| INFO :: BACK-FLOW CORRELATIONS')
     print('--|| ALYA :: READING WITNESS DATA.')
     stime = time.time()
@@ -481,27 +564,55 @@ else:
         theta=0.0
       lab = "$P_{"+str(i+1)+"}$";
       print("--|| ALYA :: POINT (%.2f,%.2f,%.3f) AT d=%.3f"% (x_wit,y_wit,z_wit,pdist));
-      u0 = wit_data_0[:,i+1]; 
-      v0 = wit_data_1[:,i+1];
-      ut = (u0*np.cos(theta)+v0*np.sin(theta));
-      vn = (-u0*np.sin(theta)+v0*np.cos(theta));
-      ut = ut-np.mean(ut,axis=None)
-      vn = vn-np.mean(vn,axis=None)
-      u_rms = np.sqrt(np.mean(np.square(ut)));
-      v_rms = np.sqrt(np.mean(np.square(vn)));
+      u0 = wit_data_0[:,i]; u_avg = np.mean(u0,axis=None); 
+      v0 = wit_data_1[:,i]; v_avg = np.mean(v0,axis=None);
+      #print("--|| ALYA :: TH=%.2f, U=%.2f, V=%.2f"% (theta*180.0/np.pi,u_avg,v_avg));
+      ut = (u0*np.cos(theta)+v0*np.sin(theta)); u_avg = np.mean(ut,axis=None);
+      vn = (-u0*np.sin(theta)+v0*np.cos(theta)); v_avg = np.mean(vn,axis=None);
+      # print("--|| ALYA :: Ut=%.2f, Vn=%.2f"% (u_avg,v_avg));
+      ut_p = ut-np.mean(ut,axis=None)
+      vn_p = vn-np.mean(vn,axis=None)
+      u_rms = np.sqrt(np.mean(np.square(ut_p)));
+      v_rms = np.sqrt(np.mean(np.square(vn_p)));
       n_total = len(ut)
-      Q1 = 100.0*float(len(np.where(np.logical_and(ut>0.0,vn>0.0))[0]))/n_total
-      Q2 = 100.0*float(len(np.where(np.logical_and(ut<0.0,vn>0.0))[0]))/n_total
-      Q3 = 100.0*float(len(np.where(np.logical_and(ut<0.0,vn<0.0))[0]))/n_total
-      Q4 = 100.0*float(len(np.where(np.logical_and(ut>0.0,vn<0.0))[0]))/n_total
+      print("--|| ALYA :: SIGNAL LENGTH=%d"% (n_total));
+      BF1 = 100.0*float(len(np.where(ut<0.0)[0]))/n_total
+      BF2 = 100.0*float(len(np.where(abs(vn/v_rms)>10.0)[0]))/n_total
+      print("--|| ALYA :: BACKFLOW EVENTS=%.3f, EXTREME EVENTS=%.3f"% (BF1, BF2));
+      Q1 = 100.0*float(len(np.where(np.logical_and(ut_p>0.0,vn_p>0.0))[0]))/n_total
+      Q2 = 100.0*float(len(np.where(np.logical_and(ut_p<0.0,vn_p>0.0))[0]))/n_total
+      Q3 = 100.0*float(len(np.where(np.logical_and(ut_p<0.0,vn_p<0.0))[0]))/n_total
+      Q4 = 100.0*float(len(np.where(np.logical_and(ut_p>0.0,vn_p<0.0))[0]))/n_total
       print("--|| ALYA :: (Q1,Q2,Q3,Q4)=(%.0f,%.0f,%.0f,%.0f)"% (Q1, Q2, Q3, Q4));
-      df = pd.DataFrame(np.transpose((ut/u_rms,vn/v_rms)), columns=['$u_t/u_t^{rms}$','$v_n/v_n^{rms}$'])
+      if('FLUC' in mode):
+        df = pd.DataFrame(np.transpose((ut_p/u_rms,vn_p/v_rms)), columns=['$u_t/u_t^{rms}$','$v_n/v_n^{rms}$'])
+        if(barScale==1):
+          ticks = [0,1,2,3,4,5,6];
+          clevels = np.logspace(-6, 0, num=12, endpoint=False);
+        else:
+          ticks = [0.05,0.15,0.25]
+      else:
+        df = pd.DataFrame(np.transpose((ut/u_rms,vn/v_rms)), columns=['$u_t/u_t^{rms}$','$v_n/v_n^{rms}$'])
+        if(barScale==1):
+          ticks = [0,1,2,3,4,6];
+          clevels = np.logspace(-6, 0, num=12, endpoint=False);
+        else:
+          ticks = [0.1,0.2,0.3,0.5];
       plt_cbar = True
-      plt_shade = True
       if(j==0):
-        kdeplot = sns.jointplot(data=df, x="$u_t/u_t^{rms}$", y="$v_n/v_n^{rms}$", cmap=dcolor[j], \
-                kind="kde", marginal_kws={"color":lcolor[j], "shade":plt_shade}, shade=plt_shade, \
-                cbar=plt_cbar, cbar_kws={"ticks":[0.0,0.1,0.2]}, label=lab)
+        plt_shade = True
+      else:
+        plt_shade = False
+      if(j==0):
+        if(barScale==1):
+          with plot_kde_as_log():
+            kdeplot = sns.jointplot(data=df, x="$u_t/u_t^{rms}$", y="$v_n/v_n^{rms}$", cmap=dcolor[j], \
+                kind="kde", shade=plt_shade, cbar=plt_cbar, cbar_kws={"ticks":ticks}, label=lab,\
+                marginal_kws={"color":lcolor[j], "shade":plt_shade, "bw_adjust":bwidth})
+        else:
+          kdeplot = sns.jointplot(data=df, x="$u_t/u_t^{rms}$", y="$v_n/v_n^{rms}$", cmap=dcolor[j], \
+                kind="kde", shade=plt_shade, cbar=plt_cbar, cbar_kws={"ticks":ticks}, label=lab,\
+                marginal_kws={"color":lcolor[j], "shade":plt_shade, "bw_adjust":bwidth})
         if(plt_cbar):
           plt.subplots_adjust(left=0.18, right=0.9, top=0.9, bottom=0.15)  # shrink fig so cbar is visible
           # get the current positions of the joint ax and the ax for the marginal x
@@ -510,43 +621,131 @@ else:
           # reposition the joint ax so it has the same width as the marginal x ax
           kdeplot.ax_joint.set_position([pos_joint_ax.x0,pos_joint_ax.y0,pos_marg_x_ax.width,pos_joint_ax.height])
           # reposition the colorbar using new x positions and y positions of the joint ax
-          kdeplot.fig.axes[-1].set_position([.87, pos_joint_ax.y0, .05, pos_joint_ax.height/3])
+          kdeplot.fig.axes[-1].set_position([.87, 0.05, .05, pos_joint_ax.height/3])
+          #kdeplot.fig.axes[-1].set_position([.87, 0.0*pos_joint_ax.y0, .05, pos_joint_ax.height/3])
       else:
         kdeplot.x = df['$u_t/u_t^{rms}$'];
         kdeplot.y = df['$v_n/v_n^{rms}$'];
-        kdeplot.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=plt_shade, \
-              cbar= plt_cbar, cbar_kws={"ticks":[0.0,0.1,0.2]}, label=lab)
+        if(barScale==1):
+          with plot_kde_as_log():
+            kdeplot.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=False, \
+              cbar= plt_cbar, cbar_kws={"ticks":ticks}, label=lab)
+        else:
+          kdeplot.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=False, \
+              cbar= plt_cbar, cbar_kws={"ticks":ticks}, label=lab)
         if(plt_cbar):
           ## reposition the joint ax so it has the same width as the marginal x ax
           kdeplot.ax_joint.set_position([pos_joint_ax.x0,pos_joint_ax.y0,pos_marg_x_ax.width,pos_joint_ax.height])
           # reposition the colorbar using new x positions and y positions of the joint ax
-          kdeplot.fig.axes[-1].set_position([.87, 0.55, .05, pos_joint_ax.height/3])
-        kdeplot.plot_marginals(sns.kdeplot, color=lcolor[j], shade=plt_shade, legend=False)
+          kdeplot.fig.axes[-1].set_position([.87, 0.75, .05, pos_joint_ax.height/3])
+        if(barScale==1):
+          with plot_kde_as_log():
+            kdeplot.plot_marginals(sns.kdeplot, color=lcolor[j], bw_adjust=bwidth, shade=plt_shade)
+        else:
+          kdeplot.plot_marginals(sns.kdeplot, color=lcolor[j], bw_adjust=bwidth, shade=plt_shade)
+      if(barScale==0):
+        kdeplot.ax_marg_x.set_xlim(-3, 3)
+        kdeplot.ax_marg_y.set_ylim(-3, 3)
+      else:
+        kdeplot.ax_marg_x.set_xlim(-6, 6)
+        kdeplot.ax_marg_y.set_ylim(-6, 6)
       kdeplot.fig.suptitle('$x/c=%.1f$'%x_wit)
-      #exit()
-      #axs[j].plot(u0/u_rms, v0/v_rms, linewidth=0.5, color='black', label=lab)
-      #plt.xlabel(r'$u/u_{rms}$');
-      #plt.ylabel(r'$v/v_{rms}$')
+      ##g = sns.JointGrid(data=df, x="$u_t/u_t^{rms}$", y="$v_n/v_n^{rms}$", space=0)
+      ##g.plot_joint(sns.kdeplot, cmap=dcolor[j], shade=plt_shade, cbar=plt_cbar, label=lab)
+      ##sns.kdeplot(df["$u_t/u_t^{rms}$"],color=lcolor[j], shade=plt_shade, bw=0.1, ax=g.ax_marg_x)
+      ##sns.kdeplot(df["$v_n/v_n^{rms}$"], color=lcolor[j], shade=plt_shade, bw=0.1, vertical=True, ax=g.ax_marg_y)
+      
+  elif("WITCHECK" in mode):
+    fname = 'wit_single_point_stat_info.csv'
+    x_loc = [0.2, 0.9, 0.95]
+    if('SAVE' in mode):
+      print('--|| ALYA :: READING WITNESS DATA.')
+      stime = time.time()
+      time_data, wit_data_0 = cfd.ExportReadProbe('./%s-VELOX.wit.bin'%(caseName))
+      time_data, wit_data_1 = cfd.ExportReadProbe('./%s-VELOY.wit.bin'%(caseName))
+      PDIST=np.zeros((nWit,1),dtype=float)
+      BEVNT=np.zeros((nWit,1),dtype=float)
+      EEVNT=np.zeros((nWit,1),dtype=float)
+      QEVNT=np.zeros((nWit,4),dtype=float)
+      QEDRS=np.zeros((nWit,1),dtype=float)
+      QED24=np.zeros((nWit,1),dtype=float)
+      INTMT=np.zeros((nWit,1),dtype=float)
+      for i in range(nWit):
+        x_wit,y_wit,z_wit = witPoints[i,:]
+        if(np.logical_and(x_wit>0.0,x_wit<1.0)):
+          indMin,PDIST[i,0] = closest_node((x_wit,y_wit), coordAir);
+          theta = Fth(coordAir[indMin,0])
+        else:
+          theta=0.0
+        u0 = wit_data_0[:,i]; u_avg = np.mean(u0,axis=None); 
+        v0 = wit_data_1[:,i]; v_avg = np.mean(v0,axis=None);
+        ut = (u0*np.cos(theta)+v0*np.sin(theta)); u_avg = np.mean(ut,axis=None);
+        vn = (-u0*np.sin(theta)+v0*np.cos(theta)); v_avg = np.mean(vn,axis=None);
+        ut_p = ut-np.mean(ut,axis=None)
+        vn_p = vn-np.mean(vn,axis=None)
+        u_rms = np.sqrt(np.mean(np.square(ut_p)));
+        v_rms = np.sqrt(np.mean(np.square(vn_p)));
+        n_total = len(ut)
+        BEVNT[i,0] = 100.0*float(len(np.where(ut<0.0)[0]))/n_total
+        EEVNT[i,0] = 100.0*float(len(np.where(abs(vn/v_rms)>10.0)[0]))/n_total
+        QEVNT[i,0] = 100.0*float(len(np.where(np.logical_and(ut_p>0.0,vn_p>0.0))[0]))/n_total
+        QEVNT[i,1] = 100.0*float(len(np.where(np.logical_and(ut_p<0.0,vn_p>0.0))[0]))/n_total
+        QEVNT[i,2] = 100.0*float(len(np.where(np.logical_and(ut_p<0.0,vn_p<0.0))[0]))/n_total
+        QEVNT[i,3] = 100.0*float(len(np.where(np.logical_and(ut_p>0.0,vn_p<0.0))[0]))/n_total
+        QEDRS[i,0] = (QEVNT[i,1]+QEVNT[i,3])-(QEVNT[i,0]+QEVNT[i,2])
+        QED24[i,0] = (QEVNT[i,1]-QEVNT[i,3])
+        # Don't know the classical definition of intermittancy.
+        INTMT[i,0] = 100.0*float(len(np.where(abs(ut_p)>(0.01*u_rms))[0]))/n_total
+      header_str='XWIT, YWIT, ZWIT, PDIST, BEVNT, EEVNT, '
+      header_str+='QEVNT:1, QEVNT:2, QEVNT:3, QEVNT:4, QEDRS, QED24, INTMT'
+      np.savetxt(fname,np.c_[witPoints,PDIST,BEVNT,EEVNT,QEVNT,QEDRS,QED24,INTMT],\
+        		fmt='%.2E', delimiter = ', ',header = header_str)
+    if('PLOT' in mode):
+      plotData = np.loadtxt(fname, comments='#',delimiter = ', ')
+      #ax = plt.figure(figsize=(11.69, 8.27))
+      for i in range(len(x_loc)):
+        lab = r'$x/c=%.2f$'%(x_loc[i]);
+        ind_loc = np.where(witPoints[:,0]==x_loc[i])[0];
+        xPlot = witPoints[ind_loc,2];
+        #---subplot I----#
+        yPlot = plotData[ind_loc,6];
+        ax = plt.subplot(211)
+        plt.plot(xPlot, yPlot, linewidth=1.5, label=lab)
+        plt.ylabel(r'$\%E_{Q_{2,4}-Q_{1,3}}$');
+        #---subplot II----#
+        yPlot = plotData[ind_loc,7];
+        ax = plt.subplot(212)
+        plt.plot(xPlot, yPlot, linewidth=1.5, label=lab)
+      plt.xlabel(r'$z/c$');
+      plt.ylabel(r'$\%E_{Q_{2}-Q_{4}}$');
+      ax.legend(loc = (0.11, 2.45),prop={'size': 10},ncol=len(x_loc))
 
 
 #plt.show()
+plt.tight_layout()
 savePath = casePath+'/plot_'+mode.lower()+'_'
 if('PSD' in mode):
   listP = [str(pt) for pt in indP]
   listStr = "_".join(listP)
   savePath = savePath+listStr+'_'
+elif('THIS' in mode):
+  listP = [str(pt) for pt in indP]
+  listStr = "_".join(listP)
+  savePath = savePath+listStr+'_'
+  savePath = savePath+calcVar.lower()+'_'
 elif('TPCORR' in mode):
   savePath = savePath+calcVar.lower()+'_'
 elif('BACKFLOW' in mode):
   listP = [str(pt) for pt in indP]
   listStr = "_".join(listP)
   savePath = savePath+listStr+'_JPROB_'
-savePath = savePath+airfoil
-savePath = savePath+'.png'
-print('----|| INFO :: SAVING FIGURE AS ',savePath)
-#plt.savefig(savePath, format='png',\
-#            dpi=600, facecolor='w', edgecolor='w',\
-#	    orientation='portrait',transparent=True,\
-#	    bbox_inches=None,pad_inches=0.1,\
-#	    papertype='a4',frameon=None, metadata=None)
-plt.savefig(savePath, format='png', dpi=600)
+if('WITCHECKSAVE' not in mode):  
+  savePath = savePath+airfoil
+  savePath = savePath+'.png'
+  print('----|| INFO :: SAVING FIGURE AS ',savePath)
+  #plt.savefig(savePath, format='png',\
+  #            dpi=600, facecolor='w', edgecolor='w',\
+  #	    orientation='portrait',transparent=True,\
+  #	    bbox_inches=None,pad_inches=0.1,\
+  #	    papertype='a4',frameon=None, metadata=None)
+  plt.savefig(savePath, format='png', dpi=600)
