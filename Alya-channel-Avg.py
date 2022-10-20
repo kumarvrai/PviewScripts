@@ -17,8 +17,10 @@ codeName	= sys.argv[2]
 fileType	= sys.argv[3]
 avgDim		= sys.argv[4]
 geomType	= sys.argv[5]
+rotDeg		= float(sys.argv[6])
 
 zDec = 6; xDec = 6
+xc = 1.0; yc = 0.0; rot=np.radians(rotDeg);
 casePath = os.getcwd()
 
 #### disable automatic camera reset on 'Show'
@@ -97,6 +99,50 @@ if('NEK' in codeName):
   case = AppendAttributes(Input=[case1,case2,case3])
   case.UpdatePipeline()
   print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  if("ROT" in geomType):
+    print("--|| NEK: ROTATE VARIABLES")
+    case = Calculator(Input=case)
+    case.ResultArrayName = "AVVEL"
+    case.Function = "(AVVEL_X*cos(%f) - AVVEL_Y*sin(%f))*iHat \
+                     + (AVVEL_X*sin(%f) + AVVEL_Y*cos(%f))*jHat + AVVEL_Z*kHat" \
+                    % (rot,rot,rot,rot)
+    case.UpdatePipeline()
+    case = Calculator(Input=case)
+    case.ResultArrayName = "AVVE2_ROT"
+    case.Function = "(AVVE2_X*cos(%f)^2 + AVVE2_Y*sin(%f)^2 - 2*AVVXY_X*sin(%f)*cos(%f))*iHat \
+                     +(AVVE2_X*sin(%f)^2 + AVVE2_Y*cos(%f)^2 + 2*AVVXY_X*sin(%f)*cos(%f))*jHat \
+                     + AVVE2_Z*kHat" \
+                    % (rot,rot,rot,rot,rot,rot,rot,rot)
+    case.UpdatePipeline()
+    case = Calculator(Input=case)
+    case.ResultArrayName = "AVVXY_ROT"
+    case.Function = "((AVVE2_X-AVVE2_Y)*sin(%f)*cos(%f)+AVVXY_X*(cos(%f)^2-sin(%f)^2))*iHat \
+                     +(AVVXY_Z*sin(%f) + AVVXY_Y*cos(%f))*jHat \
+                     +(AVVXY_Z*cos(%f) - AVVXY_Y*sin(%f))*kHat" \
+                    % (rot,rot,rot,rot,rot,rot,rot,rot)
+    case.UpdatePipeline()
+    case = Calculator(Input=case)
+    case.CoordinateResults = 1
+    case.ResultArrayName = "result"
+    case.Function = "((coordsX-%f)*cos(%f)-(coordsY-%f)*sin(%f) + %f)*iHat \
+                     +((coordsX-%f)*sin(%f)+(coordsY-%f)*cos(%f) + %f)*jHat \
+                     +coordsZ*kHat" \
+                    % (xc,rot,yc,rot,xc,xc,rot,yc,rot,yc)
+    case.UpdatePipeline()
+    startTime = time.time()
+    case = ProgrammableFilter(Input=case)
+    case.Script = \
+    """
+    import numpy as np
+    varNames0 = ['AVVEL','AVPRE','AVVE2_ROT','AVVXY_ROT','AVPR2']
+    varNames1 = ['AVVEL','AVPRE','AVVE2','AVVXY','AVPR2']
+    for (i,var) in enumerate(varNames0):
+     outName = varNames1[i]
+     avg = (inputs[0].PointData[var])
+     output.PointData.append(avg,outName)
+    """
+    case.UpdatePipeline()
+    print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
 elif('OFOAM' in codeName):
   print("--|| OFOAM :: READING OPENFOAM ARRAYS")
@@ -203,7 +249,7 @@ print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 caseVarNames = case.PointData.keys()
 indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
 indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
-if(any(code in codeName for code in ["NEK","ALYA"])):
+if(codeName in str(["NEK","ALYA"])):
   indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
   indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
   print("--|| NEK :: CALCULATING R-STRESSES")
