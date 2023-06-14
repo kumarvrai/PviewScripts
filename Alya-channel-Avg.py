@@ -213,8 +213,40 @@ elif("ALYA" in codeName):
     case.PointArrays = ['YPLUS', 'AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
   case.UpdatePipeline()
   print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+elif("SOD" in codeName):
+  print("--|| INFO :: READING SOD2D ARRAYS")
+  startTime = time.time()
+  fileName = 'results_AVG_'+caseName+'_1.hdf'
+  case = OpenDataFile(fileName)
+  ## create a new 'Programmable Filter and change names'
+  print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  case = ProgrammableFilter(Input=case)
+  case.Script = \
+  """
+  import numpy as np
+  varNames0 = inputs[0].PointData.keys()
+  for (i,var) in enumerate(varNames0):
+   outName = var.upper()
+   if("AVVEX" in outName):
+     outName = "AVVXY"
+   avg = (inputs[0].PointData[var])
+   output.PointData.append(avg,outName)
+  """
+  case.UpdatePipeline()
+  print("--|| SOD :: DONE. TIME =",time.time()-startTime,'sec')
 else:      
   raise ValueError('--|| ALYA ERROR :: CODENAME NOT RECONIZED.')
+
+if('CLEAN' in codeName):
+  print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
+  startTime = time.time()
+  case = CleantoGrid(Input=case)
+  case.UpdatePipeline()
+  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+
+Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
+print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 
 print("--|| NEK :: TEMPORAL AVERAGING.")
 startTime = time.time()
@@ -249,7 +281,7 @@ print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 caseVarNames = case.PointData.keys()
 indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
 indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
-if(codeName in str(["NEK","ALYA"])):
+if(codeName in str(["NEK","ALYA","SOD"])):
   indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
   indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
   print("--|| NEK :: CALCULATING R-STRESSES")
@@ -428,7 +460,10 @@ if('2D' in avgDim):
   #  PF1.CoordinateResults = 1
   #  PF1.Function = "coordsZ*iHat + sqrt(coordsX^2+coordsY^2)*jHat"
   #  PF1.UpdatePipeline()
-  savePath = casePath+"/AvgData_2D.vtm"
+  if(codeName in str(["NEK","ALYA"])):
+    savePath = casePath+"/AvgData_2D.vtm"
+  else:
+    savePath = casePath+"/AvgData_2D.vtp"
   SaveData(savePath, proxy=PF1)
   savePath = casePath+"/AvgData_2D.csv"
   SaveData(savePath, proxy=PF1)

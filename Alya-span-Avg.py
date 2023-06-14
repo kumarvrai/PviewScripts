@@ -38,33 +38,56 @@ elif('VTM' in file_fmt):
  fileName = 'AvgData_3D.vtm'
 elif('BUDPVD' in file_fmt): 
  fileName = './'+caseName+'.pvd'
-else:
- raise ValueError('--|| ALYA ERROR :: FILE_FMT NOT RECONIZED.')
-case = OpenDataFile(fileName)
+elif("SOD" in file_fmt):
+  print("--|| INFO :: READING SOD2D ARRAYS")
+  startTime = time.time()
+  fileName = 'results_AVG_'+caseName+'_1.hdf'
+  case = OpenDataFile(fileName)
+  ## create a new 'Programmable Filter and change names'
+  print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  case = ProgrammableFilter(Input=case)
+  case.Script = \
+  """
+  import numpy as np
+  varNames0 = inputs[0].PointData.keys()
+  for (i,var) in enumerate(varNames0):
+   outName = var.upper()
+   if("AVVEX" in outName):
+     outName = "AVVXY"
+   avg = (inputs[0].PointData[var])
+   output.PointData.append(avg,outName)
+  """
+  case.UpdatePipeline()
+  print("--|| SOD :: DONE. TIME =",time.time()-startTime,'sec')
+else:      
+  raise ValueError('--|| ALYA ERROR :: CODENAME NOT RECONIZED.')
 
-if('BUD' not in file_fmt):
-  if("FAVG" in mode):
-   if(model == "LES"):
-    case.PointArrays = ['TURBU','YPLUS','AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
-   elif(model == "DNS"):
-    case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
-   elif(model == "SCALAR"):
-    case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY','AVTEM','AVTE2','AVTEV']
-   else:
-    case.PointArrays = ['YPLUS', 'AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
-  elif("SAVG" in mode):
-   if(model == "LES"):
-    case.PointArrays = ['TURBU','YPLUS','VELOC','PRESS']
-   elif(model == "DNS"):
-    case.PointArrays = ['VELOC','PRESS']
-   else:
-    case.PointArrays = ['TURBU','VELOC','PRESS']
-else:
-   if(model == "BASIC"):
-    case.PointArrays = ['AVVEL', 'AVPRE', 'AVPGR', 'AVVGR', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
-   elif(model == "TSTEP"):
-    case.PointArrays = ['VELOC', 'PRESS']
-case.UpdatePipeline()
+#case = OpenDataFile(fileName)
+#
+#if('BUD' not in file_fmt):
+#  if("FAVG" in mode):
+#   if(model == "LES"):
+#    case.PointArrays = ['TURBU','YPLUS','AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+#   elif(model == "DNS"):
+#    case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+#   elif(model == "SCALAR"):
+#    case.PointArrays = ['AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY','AVTEM','AVTE2','AVTEV']
+#   else:
+#    case.PointArrays = ['YPLUS', 'AVVEL', 'AVPRE', 'AVTAN', 'AVVE2', 'AVVXY']
+#  elif("SAVG" in mode):
+#   if(model == "LES"):
+#    case.PointArrays = ['TURBU','YPLUS','VELOC','PRESS']
+#   elif(model == "DNS"):
+#    case.PointArrays = ['VELOC','PRESS']
+#   else:
+#    case.PointArrays = ['TURBU','VELOC','PRESS']
+#else:
+#   if(model == "BASIC"):
+#    case.PointArrays = ['AVVEL', 'AVPRE', 'AVPGR', 'AVVGR', 'AVVE2', 'AVVXY', 'AVTAN', 'RS_II', 'RS_IJ']
+#   elif(model == "TSTEP"):
+#    case.PointArrays = ['VELOC', 'PRESS']
+#case.UpdatePipeline()
 caseVarNames = case.PointData.keys()
 print("--|| ALYA : LOADED VARIABLES", caseVarNames)
 print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
@@ -275,16 +298,16 @@ import vtk
 import sys
 import numpy as np
 
-caseName = 'naca'
-fileName = './naca.pvd'
-model = 'DNS'
-nu = 0.000005
-dim = '2D'
-mode = 'SAVG'
-method = 'INTERP'
-file_fmt = 'BUDPVD'
-xDec = 6
-zDec = 6
+##caseName = 'naca'
+##fileName = './naca.pvd'
+##model = 'DNS'
+##nu = 0.000005
+##dim = '2D'
+##mode = 'SAVG'
+##method = 'INTERP'
+##file_fmt = 'BUDPVD'
+##xDec = 6
+##zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read())
@@ -331,16 +354,16 @@ import vtk
 import numpy as np
 from scipy.interpolate import griddata
 
-caseName = 'naca'
-fileName = './naca.pvd'
-model = 'DNS'
-nu = 0.000005
-dim = '2D'
-mode = 'SAVG'
-method = 'INTERP'
-file_fmt = 'BUDPVD'
-xDec = 6
-zDec = 6
+##caseName = 'naca'
+##fileName = './naca.pvd'
+##model = 'DNS'
+##nu = 0.000005
+##dim = '2D'
+##mode = 'SAVG'
+##method = 'INTERP'
+##file_fmt = 'BUDPVD'
+##xDec = 6
+##zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
 try:
@@ -445,16 +468,16 @@ import vtk
 import numpy as np
 from scipy.interpolate import griddata
 
-caseName = 'naca'
-fileName = './naca.pvd'
-model = 'DNS'
-nu = 0.000005
-dim = '2D'
-mode = 'SAVG'
-method = 'INTERP'
-file_fmt = 'BUDPVD'
-xDec = 6
-zDec = 6
+##caseName = 'naca'
+##fileName = './naca.pvd'
+##model = 'DNS'
+##nu = 0.000005
+##dim = '2D'
+##mode = 'SAVG'
+##method = 'INTERP'
+##file_fmt = 'BUDPVD'
+##xDec = 6
+##zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read(), {'__file__': inpFile})
@@ -493,16 +516,16 @@ import vtk
 import numpy as np
 from scipy.interpolate import griddata
 
-caseName = 'naca'
-fileName = './naca.pvd'
-model = 'DNS'
-nu = 0.000005
-dim = '2D'
-mode = 'SAVG'
-method = 'INTERP'
-file_fmt = 'BUDPVD'
-xDec = 6
-zDec = 6
+##caseName = 'naca'
+##fileName = './naca.pvd'
+##model = 'DNS'
+##nu = 0.000005
+##dim = '2D'
+##mode = 'SAVG'
+##method = 'INTERP'
+##file_fmt = 'BUDPVD'
+##xDec = 6
+##zDec = 6
 
 inpFile = os.getcwd()+'/'+'inputFile.py'
 exec(open(inpFile).read(), {'__file__': inpFile})
@@ -790,28 +813,48 @@ if('1D' in dim):
    PF1.Script = \
    """
    import numpy as np
+
+   inpFile = os.getcwd()+'/'+'inputFile.py'
+   try:
+     exec(open(inpFile).read())
+   except:
+     exec(open(inpFile).read(), {'__file__': inpFile})
+
    t = inputs[0].GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
    varFull = inputs[0].PointData.keys()
    print("--|| ALYA :: CALCULATING FOR",varFull," AT T=",t) 
-   if('ensi' in fileName):
+     
+   c = vtk.vtkMultiProcessController.GetGlobalController()
+   rank = c.GetLocalProcessId()
+
+   try:
     d = dsa.WrapDataObject(inputs[0].GetBlock(0))
-   elif('pvd' in fileName):
-    d = dsa.WrapDataObject(inputs[0])
+   except:
+    d = dsa.WrapDataObject(inputs[0].VTKObject)
+
    x = np.around(np.asarray(d.Points[:,0],dtype=np.double),decimals=xDec)
    y = np.around(np.asarray(d.Points[:,1],dtype=np.double),decimals=6)
+
    ## SLICE GEOMETRY
-   out = dsa.WrapDataObject(inputs[1].GetBlock(0))
+   try:
+     out = dsa.WrapDataObject(inputs[1].GetBlock(0))
+   except:
+     out = dsa.WrapDataObject(inputs[1].VTKObject)
    y_2d = np.around(np.asarray(out.Points[:,1],dtype=np.double),decimals=6)
    ind_2d = np.argsort(y_2d);
-   print("--|| ALYA CHECK :: SHAPE OF SLICE", np.shape(ind_2d))
-   
+
+   if(rank==0):
+     print("----|| ALYA CHECK :: SHAPE OF SLICE", np.shape(ind_2d))
+   x_vec = np.unique(x)
+   N = len(x_vec)
+
    for varName in varFull:
     print("--|| ALYA :: CALCULATING FOR",varName)
     varName0 = varName[0:5]
     avg = 0.0*np.asarray(out.PointData[varName],dtype=np.double)
     src = np.asarray(d.PointData[varName],dtype=np.double)
     for n in range(N):
-     ind_z = np.where(x == xpos[n])
+     ind_z = np.where(x == x_vec[n])
      #print("--|| ALYA CHECK :: AT n,X=",n,xpos[n],"SHAPE OF MASTER DATASET", np.shape(ind_z))
      y_l = y[ind_z];
      s_src = src[ind_z]
@@ -834,8 +877,8 @@ if('1D' in dim):
   #### write
   print("--|| ALYA: SAVING THE AVERAGED FILES")
   startTime = time.time()
-  savePath = casePath+"/AvgData_1D.vtm"
-  SaveData(savePath, proxy=PF1)
+  #savePath = casePath+"/AvgData_1D.vtm"
+  #SaveData(savePath, proxy=PF1)
   savePath = casePath+"/AvgData_1D.csv"
   SaveData(savePath, proxy=PF1)
   print("----|| ALYA: 1D STATISTICS FILE WRITTEN AS: ",savePath)
