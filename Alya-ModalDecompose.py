@@ -492,8 +492,8 @@ if do_DMD:
    print("----|| ALYA :: WRITING DMD INFO TO ",DMD_info_filename)
    # output modes info
    header_str = 'DMD modes info\\n'
-   header_str += 'eigen_vals.real,eigen_vals.imag,growth_rate, frequency, spectral_coeffs, mode_amp\\n'
-   header_str += r'AU,AU,1/s, Hz, AU, AU'
+   header_str += 'eig_real, eig_imag, growth_rate, frequency, spectral_coeffs, mode_amp\\n'
+   header_str += r'AU, AU, 1/s, Hz, AU, AU'
    dt = np.average(np.array(times[1:])-np.array(times[:-1])) #time step
    np.savetxt(DMD_info_filename, \
                np.c_[ np.real(eigen_vals), \
@@ -655,7 +655,7 @@ if do_DMD:
 if('RECON' in MODE):
   print("--|| ALYA :: READING POD ARRAYS")
   startTime = time.time()
-  case = OpenDataFile('POD_spatial_modes.vtm')
+  case = OpenDataFile(casename+'.vtm')
   case.UpdatePipeline()
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   print("--|| ALYA :: MERGING BLOCKS")
@@ -665,7 +665,7 @@ if('RECON' in MODE):
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   print("--|| ALYA :: PERFORM MODAL RECONSTRUCTION AND WRITE DATA")
   startTime = time.time()
-  PF1 = ProgrammableFilter(Input=dataSet)
+  PF1 = ProgrammableFilter(Input=case)
   PF1.Script = \
 """
 import os 
@@ -709,6 +709,7 @@ headerArray = headerArray[1:]
 headerArray = [int(i) for i in headerArray]
 ModesArray = np.array(headerArray, dtype=int)
 
+print('--||INFO: TOTAL MODES = %d'%len(ModesArray))
 #-----Extract eigenvalues array -------#
 headerArray = list(np.concatenate(headerStr[indEV:indEnergy]).flat)
 headerArray = list(filter(None, headerArray))
@@ -728,35 +729,22 @@ eigenVal = np.array(headerArray, dtype=int)
 data = np.loadtxt(fileName, dtype=float, comments='#', delimiter=',')
 timeArray = data[:,0]; 
 nt = len(timeArray); 
-print('Time size = %d' % nt);
 eigenVec = data[:,1:];
 
 #-------------------------------------#
 #-------------------------------------#
-
-pod_var = 'VELOC'
-
-d = dsa.WrapDataObject(inputs[0].VTKObject)
-varName = 'POD_mode_'+pod_var+'_'+str(0);
-
-nx,ny = np.shape(d.PointData[varName])
-
-avvel = d.PointData["AVVEL"]
+var_recon = ['VELOC','PRESS']
 
 outFolderName = 'PodData_2D_{}'.format(MR_POD)
 if not os.path.exists(outFolderName):
   os.makedirs(outFolderName)
 
-f = open("PodData_2D.pvd", "w")
-f.write('<VTKFile type="Collection" version="1.0" byte_order="LittleEndian" header_type="UInt64">\n')
-f.write('\t<Collection>\n')
+d = dsa.WrapDataObject(inputs[0].VTKObject)
 input = self.GetInputDataObject(0,0)
-dataSet = self.GetOutputDataObject(0)
-dataSet.CopyStructure(input)
-
 data_to_write = vtk.vtkUnstructuredGrid()
 data_to_write.CopyStructure(input)
-
+dataSet = self.GetOutputDataObject(0)
+dataSet.CopyStructure(input)
 ugw = vtk.vtkXMLUnstructuredGridWriter()
 ugw.SetInputData(data_to_write)
 #ugw.SetNumberOfTimeSteps(nt)
@@ -764,8 +752,15 @@ ugw.SetInputData(data_to_write)
 #ugw.Stop()
 
 #-----------------------#
-avgFlowRecon = np.zeros((nx,ny),dtype=np.double)
+f = open(outFolderName+'.pvd', "w")
+f.write('<VTKFile type="Collection" version="1.0" byte_order="LittleEndian" header_type="UInt64">\\n')
+f.write('\\t<Collection>\\n')
+
 for n in range(nt):
+ for pod_var in var_recon:
+  varName = 'POD_mode_'+pod_var+'_'+str(0);
+  avvel = d.PointData["AV"+pod_var[0:3]]
+  avgFlowRecon = 0.0*d.PointData[varName]
   avgFlow = 0.0*d.PointData[varName]
   for m in range(MR_POD):
     varName = 'POD_mode_'+pod_var+'_'+str(m);
@@ -774,14 +769,15 @@ for n in range(nt):
   vtk_array = numpy_to_vtk(num_array=avgFlowRecon, deep=True, array_type=vtk.VTK_FLOAT)
   vtk_array.SetName(pod_var)
   dataSet.GetPointData().AddArray(vtk_array)
-  data_to_write.ShallowCopy(dataSet)
-  fileWriteName = casePath+'/'+outFolderName+'/PodData_2D_{}.vtu'.format(n)
-  ugw.SetFileName(fileWriteName)
-  ugw.Write()
-  f.write('\t\t<DataSet timestep="%f" part="0" file="%s"/>\n' % (timeArray[n],outFolderName+'/PodData_2D_{}.vtu'.format(n)))
-  f.write('\t</Collection>\n')
-  f.write('</VTKFile>')
-  f.close()
+ data_to_write.ShallowCopy(dataSet)
+ fileWriteName = casePath+'/'+outFolderName+'/PodData_2D_{}.vtu'.format(n)
+ ugw.SetFileName(fileWriteName)
+ ugw.Write()
+ f.write('\\t\\t<DataSet timestep="%f" part="0" file="%s"/>\\n' \
+        % (timeArray[n],outFolderName+'/PodData_2D_{}.vtu'.format(n)))
+f.write('\\t</Collection>\\n')
+f.write('</VTKFile>')
+f.close()
 """ 
   PF1.UpdatePipeline()
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
