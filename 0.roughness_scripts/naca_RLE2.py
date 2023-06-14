@@ -32,19 +32,26 @@ def wrap_cyl(r, theta,xc0, yc0):
     return x, y
 
 ###########################################
+fileType = sys.argv[1]
+foilType = sys.argv[2]
+RGH_SCRPTS='/home/kvishal/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
 RGH_SCRPTS=os.path.expanduser('~')+'/1.post_process/0.alya_pv_scripts/0.roughness_scripts/input_files/'
-fileType = 'alya'
-if fileType == 'msh':
+if fileType == 'GMSH':
    geofile_in = 'naca.msh'
    geofile_out= 'naca_r.msh'
    bString = '$Nodes'
    eString = '$EndNodes'
-elif fileType == 'alya':
+elif fileType == 'ALYA':
    geofile_in = 'naca.geo.dat'
    geofile_out= 'naca_r.geo.dat'
    bString = 'COORDINATES'
    eString = 'END_COORDINATES'
-airfoilCoord = RGH_SCRPTS+'naca4412.txt'
+if('4412' in foilType):    
+  airfoilCoord = RGH_SCRPTS+'/naca4412.txt'
+elif('0012' in foilType):  
+  airfoilCoord = RGH_SCRPTS+'/naca0012.txt'
+else:
+  raise ValueError('--|| ALYA ERROR :: AIRFOIL TYPE NOT RECONIZED.')
 
 coordAirfoil = np.loadtxt(airfoilCoord)
 
@@ -229,18 +236,14 @@ xBoxR = np.amax(centerArr[:,0],axis=None) + 5.0*h
 yBoxL = np.amin(centerArr[:,1],axis=None) - 5.0*h
 yBoxR = np.amax(centerArr[:,1],axis=None) + 5.0*h
 
-print('ALYA --|| SCRIPTING BOX X IN',xBoxL,xBoxR,'Y IN',yBoxL,yBoxR) 
-
-print('ALYA --|| INITIALIZE THE SCRIPT')
+#print('ALYA --|| SCRIPTING BOX X IN',xBoxL,xBoxR,'Y IN',yBoxL,yBoxR) 
+#print('ALYA --|| INITIALIZE THE SCRIPT')
 
 for line in f:
     if inCoords:
         ii = ii + 1
-        if 'END' in line:
-            print('ALYA --|| END WRITING GEO FILE')
-            print(line)
-
-
+        if eString in line:
+            print('----||DONE ::  TIME ',time.time()-startTime,'sec')
             inCoords = False
             lineB = True
             done = True
@@ -328,12 +331,15 @@ for line in f:
 
     if lineB:
         g.write(line)
-        if 'COORD' in line:
+        if bString in line:
+            if fileType == 'GMSH':
+               line = next(f) 
+               g.write(line)
             if done == False:
                 inCoords = True
                 lineB = False
-                print('ALYA --|| START WRITING MODIFIED GEO FILE')
-                print(line)
+                print('--||ALYA :: START WRITING MODIFIED GEO FILE')
+                startTime = time.time()
 
 
 
