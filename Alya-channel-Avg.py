@@ -226,11 +226,15 @@ elif("SOD" in codeName):
   """
   import numpy as np
   varNames0 = inputs[0].PointData.keys()
+  rho = inputs[0].PointData["avrho"]
+  #---------------------------------#
   for (i,var) in enumerate(varNames0):
+   avg = inputs[0].PointData[var]
    outName = var.upper()
+   if(outName in ["AVVEL","AVPRE","AVVE2","AVVEX"]):
+     avg = avg/rho
    if("AVVEX" in outName):
-     outName = "AVVXY"
-   avg = (inputs[0].PointData[var])
+       outName = "AVVXY"
    output.PointData.append(avg,outName)
   """
   case.UpdatePipeline()
@@ -340,7 +344,8 @@ print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 ########### 3D STATISTICS ###################
 if('3D' in avgDim):
  # Save a 3D time averaged file
- savePath = casePath+"/AvgData_3D.vtm"
+ savePath = casePath+"/AvgData_3D.pvd"
+ savePath = casePath+"/AvgData_3D.csv"
  SaveData(savePath, proxy=case)
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
 ################################################ 

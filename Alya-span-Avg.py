@@ -18,9 +18,10 @@ model    = sys.argv[2]
 nu       = float(sys.argv[3])
 dim      = sys.argv[4]
 mode     = sys.argv[5]
-method     = sys.argv[6]
-file_fmt     = sys.argv[7]
-zDec = 6; xDec = 6
+method   = sys.argv[6]
+file_fmt = sys.argv[7]
+intMethod='nearest';
+zDec = 6; xDec = 6;
 
 c = vtk.vtkMultiProcessController.GetGlobalController()
 mpi_ranks = c.GetNumberOfProcesses()
@@ -51,11 +52,15 @@ elif("SOD" in file_fmt):
   """
   import numpy as np
   varNames0 = inputs[0].PointData.keys()
+  rho = inputs[0].PointData["avrho"]
+  #---------------------------------#
   for (i,var) in enumerate(varNames0):
+   avg = inputs[0].PointData[var]
    outName = var.upper()
+   if(outName in ["AVVEL","AVPRE","AVVE2","AVVEX"]):
+     avg = avg/rho
    if("AVVEX" in outName):
-     outName = "AVVXY"
-   avg = (inputs[0].PointData[var])
+       outName = "AVVXY"
    output.PointData.append(avg,outName)
   """
   case.UpdatePipeline()
@@ -104,6 +109,7 @@ f.write("method = '%s'\n" % method)
 f.write("file_fmt = '%s'\n" % file_fmt)
 f.write("xDec = %d\n" % xDec)
 f.write("zDec = %d\n" % zDec)
+f.write("intMethod = '%s'\n" % intMethod)
 f.close()
 
 if('D3' in file_fmt):
@@ -423,7 +429,7 @@ for varName in varFull:
   if("SORT" in method):
    avg[ind_2d] = avg[ind_2d] + s_src[ind]
   elif("INTERP" in method):
-   avg = avg + griddata((x_l,y_l),s_src, (x_2d,y_2d), method='nearest')
+   avg = avg + griddata((x_l,y_l),s_src, (x_2d,y_2d), method=intMethod)
   else:
    raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE AVERGAES?')
  avg = avg/N;
@@ -573,7 +579,7 @@ for varName in varFull:
   if("SORT" in method):
    avg[ind_2d] = avg[ind_2d] + (s_src[ind]-a_src[ind_2d])**2
   elif("INTERP" in method):
-   s_src = griddata((x_l,y_l),s_src, (x_2d,y_2d), method='nearest')
+   s_src = griddata((x_l,y_l),s_src, (x_2d,y_2d), method=intMethod)
    avg = avg + (s_src-a_src)**2
   else:
    raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE STD?')
@@ -862,7 +868,7 @@ if('1D' in dim):
       ind = np.argsort(y_l); 
       avg[ind_2d] = avg[ind_2d] + s_src[ind]
      elif("INTERP" in method):
-      avg = avg + griddata((y_l),s_src, (y_2d), method='linear')
+      avg = avg + griddata((y_l),s_src, (y_2d), method=intMethod)
      else:
       raise ValueError('--|| ALYA ERROR :: HOW DO YOU WANT TO CALCULATE AVERGAES?')
     avg = avg/N;
@@ -880,6 +886,6 @@ if('1D' in dim):
   #savePath = casePath+"/AvgData_1D.vtm"
   #SaveData(savePath, proxy=PF1)
   savePath = casePath+"/AvgData_1D.csv"
-  SaveData(savePath, proxy=PF1)
+  SaveData(savePath, proxy=PF1, Precision=12)
   print("----|| ALYA: 1D STATISTICS FILE WRITTEN AS: ",savePath)
   print("--|| ALYA: FILE SAVED. TIME =",time.time()-startTime,'sec')
