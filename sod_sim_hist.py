@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
-data = np.loadtxt('analysis_channel-1.dat', skiprows=0)
+fileName = sys.argv[1]
+data = np.loadtxt('analysis_'+fileName+'.dat', skiprows=0)
 
 time    = data[:,0];
 Ek      = data[:,1];
