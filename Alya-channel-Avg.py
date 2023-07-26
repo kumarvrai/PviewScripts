@@ -218,6 +218,7 @@ elif("SOD" in codeName):
   startTime = time.time()
   fileName = 'results_AVG_'+caseName+'_1.hdf'
   case = OpenDataFile(fileName)
+  case.UpdatePipeline()
   ## create a new 'Programmable Filter and change names'
   print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
   startTime = time.time()
@@ -231,7 +232,7 @@ elif("SOD" in codeName):
   for (i,var) in enumerate(varNames0):
    avg = inputs[0].PointData[var]
    outName = var.upper()
-   if(outName in ["AVVEL","AVPRE","AVVE2","AVVEX"]):
+   if(outName in ["AVVEL","AVVE2","AVVEX"]):
      avg = avg/rho
    if("AVVEX" in outName):
        outName = "AVVXY"
@@ -348,6 +349,21 @@ if('3D' in avgDim):
  savePath = casePath+"/AvgData_3D.csv"
  SaveData(savePath, proxy=case)
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
+ #slice1 = Slice(Input=case)
+ #slice1.SliceType = 'Plane'
+ #slice1.SliceOffsetValues = [0.0]
+ #slice1.SliceType.Origin = [3.0, 1.0, 1.5]
+ #slice1.SliceType.Normal = [0.0, 0.0, 1.0]
+ #slice1.UpdatePipeline()
+ #slice1 = Slice(Input=slice1)
+ #slice1.SliceType = 'Plane'
+ #slice1.SliceOffsetValues = [0.0]
+ #slice1.SliceType.Origin = [3.0, 1.0, 1.5]
+ #slice1.SliceType.Normal = [1.0, 0.0, 0.0]
+ #slice1.UpdatePipeline()
+ #savePath = casePath+"/PySodAvgData_1D.csv"
+ #SaveData(savePath, proxy=slice1)
+ #print("----|| NEK: TAVG 1D FILE WRITTEN ")
 ################################################ 
 
 print("--|| NEK :: EVALUATING DIMENSIONS FOR SPANWISE AVERAGE")
