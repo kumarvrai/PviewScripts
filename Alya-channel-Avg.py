@@ -240,6 +240,13 @@ elif("SOD" in codeName):
   """
   case.UpdatePipeline()
   print("--|| SOD :: DONE. TIME =",time.time()-startTime,'sec')
+elif("PVD" in codeName):
+  print("--|| INFO :: READING PVD ARRAYS")
+  startTime = time.time()
+  fileName = caseName+'.pvd'
+  case = OpenDataFile(fileName)
+  case.UpdatePipeline()
+  print("--|| PVD :: DONE. TIME =",time.time()-startTime,'sec')
 else:      
   raise ValueError('--|| ALYA ERROR :: CODENAME NOT RECONIZED.')
 
