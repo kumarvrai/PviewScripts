@@ -216,7 +216,7 @@ elif("ALYA" in codeName):
 elif("SOD" in codeName):
   print("--|| INFO :: READING SOD2D ARRAYS")
   startTime = time.time()
-  fileName = 'results_AVG_'+caseName+'_1.hdf'
+  fileName = 'results_AVG_'+caseName+'.hdf'
   case = OpenDataFile(fileName)
   case.UpdatePipeline()
   ## create a new 'Programmable Filter and change names'
