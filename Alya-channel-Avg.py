@@ -219,21 +219,24 @@ elif("SOD" in codeName):
   fileName = 'results_AVG_'+caseName+'.hdf'
   case = OpenDataFile(fileName)
   case.UpdatePipeline()
+  print("--||SOD :: LOADED VARIABLES",case.PointData.keys())
   ## create a new 'Programmable Filter and change names'
-  print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+  print("--|| SOD: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
   startTime = time.time()
   case = ProgrammableFilter(Input=case)
   case.Script = \
   """
   import numpy as np
   varNames0 = inputs[0].PointData.keys()
-  rho = inputs[0].PointData["avrho"]
+  if("avrho" in varNames0):
+    rho = inputs[0].PointData["avrho"]
   #---------------------------------#
   for (i,var) in enumerate(varNames0):
    avg = inputs[0].PointData[var]
    outName = var.upper()
    if(outName in ["AVVEL","AVVE2","AVVEX"]):
-     avg = avg/rho
+     if("avrho" in varNames0):
+       avg = avg/rho
    if("AVVEX" in outName):
        outName = "AVVXY"
    output.PointData.append(avg,outName)
@@ -492,6 +495,7 @@ if('2D' in avgDim):
     savePath = casePath+"/AvgData_2D.vtm"
   else:
     savePath = casePath+"/AvgData_2D.vtp"
+  savePath = casePath+"/AvgData_2D.pvd"
   SaveData(savePath, proxy=PF1)
   savePath = casePath+"/AvgData_2D.csv"
   SaveData(savePath, proxy=PF1)
