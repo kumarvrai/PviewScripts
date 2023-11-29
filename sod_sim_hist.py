@@ -44,13 +44,17 @@ if(os.path.isfile(file_3)):
 if('pipe' in fileName):
  print("--||SOD :: Calculating utau for pipe")
  utau      = np.sqrt(abs(Fvz/area))
+ print("--||SOD :: time-average utau =%f",np.mean(utau,axis=None))
 elif('channel' in fileName):
  print("--||SOD :: Calculating utau for channel")
  utau      = np.sqrt(abs(Fvx/area))
+ print("--||SOD :: time-average utau =%f",np.mean(utau,axis=None))
 elif('naca' in fileName):
  print("--||SOD :: Calculating utau for NACA")
  cd      = 2.0*(Fvx+Fpx)/area
  cl      = 2.0*(Fvy+Fpy)/area
+ print("--||SOD :: time-average Cd =%f",np.mean(cd,axis=None))
+ print("--||SOD :: time-average Cl =%f",np.mean(cl,axis=None))
 else:
  print("--||SOD :: Error. fileName handling not defined!")
 
