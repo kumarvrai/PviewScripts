@@ -17,7 +17,7 @@ data_2 = np.loadtxt(file_2,delimiter=",",skiprows=1)
 visco   = 1.0;
 lw = 1.0
 
-startInd = 100;
+startInd = 10000;
 time    = data[startInd::,0];
 Ek      = data[startInd::,1];
 eps_S   = data[startInd::,2];
@@ -44,9 +44,15 @@ if(os.path.isfile(file_3)):
 if('pipe' in fileName):
  print("--||SOD :: Calculating utau for pipe")
  utau      = np.sqrt(abs(Fvz/area))
-else: 
+elif('channel' in fileName):
  print("--||SOD :: Calculating utau for channel")
  utau      = np.sqrt(abs(Fvx/area))
+elif('naca' in fileName):
+ print("--||SOD :: Calculating utau for NACA")
+ cd      = 2.0*(Fvx+Fpx)/area
+ cl      = 2.0*(Fvy+Fpy)/area
+else:
+ print("--||SOD :: Error. fileName handling not defined!")
 
 if(os.path.isfile(file_3)):
   #ylab = [r'$E_k$',r'$\epsilon_{S}$',r'$\epsilon_{D}$',r'$\epsilon_{T}$',r'$M_{max}$','']
@@ -100,12 +106,25 @@ if(os.path.isfile(file_3)):
   plt.xlabel(r'$t$')
   plt.ylabel(ylab[5])
   #------------------#
-  axs = fig.add_subplot(grid[3,:])
-  axs.plot(time_2,utau,linewidth=lw,label=r'$u_{\tau}$')
-  #axs[2,1].plot(time,Fy,linewidth=lw,label=r'$F_y$')
-  plt.xlabel(r'$t$')
-  plt.ylabel(r'$u_{\tau}$')
-  plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+  if('naca' in fileName):
+    axs = fig.add_subplot(grid[3,0])
+    axs.plot(time_2,cl,linewidth=lw,label=r'$c_{l}$')
+    plt.xlabel(r'$t$')
+    plt.ylabel(r'$c_{l}$')
+    plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+
+    axs = fig.add_subplot(grid[3,1])
+    axs.plot(time_2,cd,linewidth=lw,label=r'$c_{d}$')
+    plt.xlabel(r'$t$')
+    plt.ylabel(r'$c_{d}$')
+    plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+  else:
+    axs = fig.add_subplot(grid[3,:])
+    axs.plot(time_2,utau,linewidth=lw,label=r'$u_{\tau}$')
+    #axs[2,1].plot(time,Fy,linewidth=lw,label=r'$F_y$')
+    plt.xlabel(r'$t$')
+    plt.ylabel(r'$u_{\tau}$')
+    plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
   #------------------#
   
   fig.tight_layout()
@@ -135,12 +154,24 @@ else:
   axs.plot(time,Mmax,linewidth=1.5,label=r'$M_{max}$')
   plt.xlabel(r'$t$')
   plt.ylabel(ylab[4])
-  axs = fig.add_subplot(grid[2,:])
-  axs.plot(time_2,utau,linewidth=1.5,label=r'$u_{\tau}$')
-  #axs[2,1].plot(time,Fy,linewidth=1.5,label=r'$F_y$')
+  if('naca' in fileName):
+    axs = fig.add_subplot(grid[2,0])
+    axs.plot(time_2,cl,linewidth=lw,label=r'$c_{l}$')
+    plt.xlabel(r'$t$')
+    plt.ylabel(r'$c_{l}$')
+    plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
 
-  plt.xlabel(r'$t$')
-  plt.ylabel(r'$u_{\tau}$')
+    axs = fig.add_subplot(grid[2,1])
+    axs.plot(time_2,cd,linewidth=lw,label=r'$c_{d}$')
+    plt.xlabel(r'$t$')
+    plt.ylabel(r'$c_{d}$')
+    plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+  else:
+    axs = fig.add_subplot(grid[2,:])
+    axs.plot(time_2,utau,linewidth=1.5,label=r'$u_{\tau}$')
+    #axs[2,1].plot(time,Fy,linewidth=1.5,label=r'$F_y$')
+    plt.xlabel(r'$t$')
+    plt.ylabel(r'$u_{\tau}$')
 
   plt.tight_layout()
   plt.savefig('sod_analysis.png')
