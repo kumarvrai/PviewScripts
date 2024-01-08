@@ -343,6 +343,41 @@ case.ComputeQCriterion = 1
 case.QCriterionArrayName = 'QCRIT'
 case.UpdatePipeline()
 print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+if("CPCF" in fileType):
+  # CALCULATE CPCF
+  print("--|| NEK :: CALCULATING CPCF")
+  case_clcd = ExtractSurface(Input=case)
+  case_clcd.UpdatePipeline()
+  case_clcd = GenerateSurfaceNormals(Input=case_clcd)
+  case_clcd.UpdatePipeline()
+  QuerySelect(QueryString='(mag(avvel) == 0)', 
+              FieldType='POINT', InsideOut=0)
+  generateSurfaceNormals1 = FindSource('GenerateSurfaceNormals1')            
+  SetActiveSource(case_clcd)            
+  case_clcd = ExtractSelection(registrationName='ExtractSelection1',Input=case_clcd)
+  case_clcd.UpdatePipeline()
+  #case_clcd = Clip(Input=case_clcd)
+  #case_clcd.ClipType = 'Box'
+  #case_clcd.ClipType.Position = [-1, -1, 0]
+  #case_clcd.ClipType.Length = [3, 3, 1]
+  #case_clcd.Invert = 1
+  #case_clcd.UpdatePipeline()
+  case_clcd = Calculator(Input=case_clcd)
+  case_clcd.ResultArrayName = "AVGCF"
+  case_clcd.Function = "(1/500)*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"
+  case_clcd.UpdatePipeline()
+  case_clcd = Calculator(Input=case_clcd)
+  case_clcd.ResultArrayName = "AVGCP"
+  case_clcd.Function = "AVPRE"
+  case_clcd.UpdatePipeline()
+  savePath = casePath+"/NekBndData_1D.csv"
+  #SaveData(savePath, proxy=case_clcd)
+  SaveData(savePath, proxy=case_clcd,ChooseArraysToWrite=1,
+                     PointDataArrays=['AVGCF', 'AVGCP'],
+                     UseScientificNotation=1)
+  print("----|| NEK: 1D CPCF FILE WRITTEN AS: ",savePath)
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+
 ## CALCULATE LAMBDA2
 #print("--|| NEK :: CALCULATING LAMBDA")
 #startTime = time.time()
@@ -356,7 +391,8 @@ print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 if('3D' in avgDim):
  # Save a 3D time averaged file
  savePath = casePath+"/AvgData_3D.pvd"
- savePath = casePath+"/AvgData_3D.csv"
+ savePath = casePath+"/AvgData_2D.vtm"
+ #savePath = casePath+"/AvgData_3D.csv"
  SaveData(savePath, proxy=case)
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
  #slice1 = Slice(Input=case)
@@ -491,8 +527,10 @@ if('2D' in avgDim):
   #  PF1.CoordinateResults = 1
   #  PF1.Function = "coordsZ*iHat + sqrt(coordsX^2+coordsY^2)*jHat"
   #  PF1.UpdatePipeline()
-  if(codeName in str(["NEK","ALYA"])):
+  if(codeName in str(["NEK","ALYA","SOD"])):
     savePath = casePath+"/AvgData_2D.vtm"
+  #elif(codeName in str(["SOD"])):
+  #  savePath = casePath+"/AvgData_2D.pvd"
   else:
     savePath = casePath+"/AvgData_2D.vtp"
   savePath = casePath+"/AvgData_2D.pvd"
