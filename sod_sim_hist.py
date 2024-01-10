@@ -17,7 +17,7 @@ data_2 = np.loadtxt(file_2,delimiter=",",skiprows=1)
 visco   = 1.0;
 lw = 1.0
 
-startInd = 10000;
+startInd = 100;
 time    = data[startInd::,0];
 Ek      = data[startInd::,1];
 eps_S   = data[startInd::,2];
@@ -50,11 +50,16 @@ elif('channel' in fileName):
  utau      = np.sqrt(abs(Fvx/area))
  print("--||SOD :: time-average utau = ",np.mean(utau,axis=None))
 elif('naca' in fileName):
- print("--||SOD :: Calculating utau for NACA")
- cd      = 2.0*(Fvx+Fpx)/area
- cl      = 2.0*(Fvy+Fpy)/area
- print("--||SOD :: time-average Cd = ",np.mean(cd,axis=None))
- print("--||SOD :: time-average Cl = ",np.mean(cl,axis=None))
+ print("--||SOD :: Calculating Cl/Cd for NACA")
+ print("----||Fvx,Fpx,Fvy,Fpy = ",np.mean(Fvx,axis=None),np.mean(Fpx,axis=None),np.mean(Fvy,axis=None),np.mean(Fpy,axis=None))
+ cdp     = 2.0*(Fpx)
+ cdv     = 2.0*(Fvx)
+ cd      = 2.0*(Fvx+Fpx)
+ cl      = 2.0*(Fvy+Fpy)
+ print("--||SOD :: time-average Cdp = ",np.mean(cdp,axis=None))
+ print("--||SOD :: time-average Cdv = ",np.mean(cdv,axis=None))
+ print("--||SOD :: time-average Cd  = ",np.mean(cd,axis=None))
+ print("--||SOD :: time-average Cl  = ",np.mean(cl,axis=None))
 else:
  print("--||SOD :: Error. fileName handling not defined!")
 
