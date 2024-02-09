@@ -11,6 +11,21 @@ from paraview.simple import *
 #pxm.GetVersion()
 #print("--|| NEK :: USING PARAVIEW VERSION",pxm)
 
+#------------------------------------#
+def convert_to_float(frac_str):
+    try:
+        return float(frac_str)
+    except ValueError:
+        num, denom = frac_str.split('/')
+        try:
+            leading, num = num.split(' ')
+            whole = float(leading)
+        except ValueError:
+            whole = 0
+        frac = float(num) / float(denom)
+        return whole - frac if whole < 0 else whole + frac
+#------------------------------------#
+
 
 caseName	= sys.argv[1]
 codeName	= sys.argv[2]
@@ -18,10 +33,12 @@ fileType	= sys.argv[3]
 avgDim		= sys.argv[4]
 geomType	= sys.argv[5]
 rotDeg		= float(sys.argv[6])
+visc		= convert_to_float(sys.argv[7])
 
 zDec = 6; xDec = 6
 xc = 1.0; yc = 0.0; rot=np.radians(rotDeg);
 casePath = os.getcwd()
+
 
 #### disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
@@ -350,10 +367,11 @@ if("CPCF" in fileType):
   case_clcd.UpdatePipeline()
   case_clcd = GenerateSurfaceNormals(Input=case_clcd)
   case_clcd.UpdatePipeline()
-  #QuerySelect(QueryString='(mag(avvel) == 0)', 
-  #            FieldType='POINT', InsideOut=0)
   #generateSurfaceNormals1 = FindSource('GenerateSurfaceNormals1')            
-  #SetActiveSource(case_clcd)            
+  #SetActiveSource(generateSurfaceNormals1)            
+  #renderView1 = GetActiveView()
+  #QuerySelect(QueryString='(mag(AVVEL) == 0)', 
+  #            FieldType='POINT', InsideOut=0)
   #case_clcd = ExtractSelection(registrationName='ExtractSelection1',Input=case_clcd)
   #case_clcd.UpdatePipeline()
   case_clcd = Clip(Input=case_clcd)
@@ -364,7 +382,7 @@ if("CPCF" in fileType):
   case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCF"
-  case_clcd.Function = "(1/500)*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"
+  case_clcd.Function = "%s*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"%visc
   case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCP"
@@ -390,9 +408,9 @@ if("CPCF" in fileType):
 ########### 3D STATISTICS ###################
 if('3D' in avgDim):
  # Save a 3D time averaged file
- savePath = casePath+"/AvgData_3D.pvd"
- savePath = casePath+"/AvgData_2D.vtm"
- #savePath = casePath+"/AvgData_3D.csv"
+ #savePath = casePath+"/AvgData_3D.pvd"
+ #savePath = casePath+"/AvgData_2D.vtm"
+ savePath = casePath+"/AvgData_3D.csv"
  SaveData(savePath, proxy=case)
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
  #slice1 = Slice(Input=case)
