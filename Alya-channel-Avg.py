@@ -367,19 +367,18 @@ if("CPCF" in fileType):
   case_clcd.UpdatePipeline()
   case_clcd = GenerateSurfaceNormals(Input=case_clcd)
   case_clcd.UpdatePipeline()
-  #generateSurfaceNormals1 = FindSource('GenerateSurfaceNormals1')            
-  #SetActiveSource(generateSurfaceNormals1)            
-  #renderView1 = GetActiveView()
-  #QuerySelect(QueryString='(mag(AVVEL) == 0)', 
-  #            FieldType='POINT', InsideOut=0)
-  #case_clcd = ExtractSelection(registrationName='ExtractSelection1',Input=case_clcd)
-  #case_clcd.UpdatePipeline()
-  case_clcd = Clip(Input=case_clcd)
-  case_clcd.ClipType = 'Box'
-  case_clcd.ClipType.Position = [-1, -1, 0]
-  case_clcd.ClipType.Length = [3, 3, 1]
-  case_clcd.Invert = 1
+  SetActiveSource(case_clcd)            
+  Show(case_clcd)
+  SetActiveView(GetActiveView())
+  QuerySelect(QueryString='(mag(AVVEL) == 0)', FieldType='POINT', InsideOut=0)
+  case_clcd = ExtractSelection(Input=case_clcd)
   case_clcd.UpdatePipeline()
+  #case_clcd = Clip(Input=case_clcd)
+  #case_clcd.ClipType = 'Box'
+  #case_clcd.ClipType.Position = [-1, -1, 0]
+  #case_clcd.ClipType.Length = [3, 3, 1]
+  #case_clcd.Invert = 1
+  #case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCF"
   case_clcd.Function = "%s*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"%visc
