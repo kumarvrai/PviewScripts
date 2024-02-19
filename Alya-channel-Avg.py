@@ -267,6 +267,13 @@ elif("PVD" in codeName):
   case = OpenDataFile(fileName)
   case.UpdatePipeline()
   print("--|| PVD :: DONE. TIME =",time.time()-startTime,'sec')
+elif("VTM" in codeName):
+  print("--|| INFO :: READING PVD ARRAYS")
+  startTime = time.time()
+  fileName = caseName+'.vtm'
+  case = OpenDataFile(fileName)
+  case.UpdatePipeline()
+  print("--|| VTM :: DONE. TIME =",time.time()-startTime,'sec')
 else:      
   raise ValueError('--|| ALYA ERROR :: CODENAME NOT RECONIZED.')
 
@@ -313,7 +320,8 @@ print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 caseVarNames = case.PointData.keys()
 indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
 indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
-if(codeName in str(["NEK","ALYA","SOD"])):
+#if(codeName in str(["NEK","ALYA","SOD"])):
+if('SKIP' not in codeName):
   indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
   indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
   print("--|| NEK :: CALCULATING R-STRESSES")
@@ -334,32 +342,32 @@ if(codeName in str(["NEK","ALYA","SOD"])):
                     caseVarNames[indU],'X',caseVarNames[indU],'Z')
   case.UpdatePipeline()
   print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
-# GRADIENT CALC
-print("--|| NEK :: CALCULATING PRESS GRADIENT")
-startTime = time.time()
-case = GradientOfUnstructuredDataSet(Input=case)
-case.ScalarArray = ['POINTS', caseVarNames[indP]]
-case.ComputeGradient = 1
-case.ResultArrayName = 'AVPGR'
-case.ComputeVorticity = 0
-case.VorticityArrayName = 'OMEGA'
-case.ComputeQCriterion = 0
-case.QCriterionArrayName = 'QCRIT'
-case.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
-
-print("--|| NEK :: CALCULATING AVVEL GRADIENT, Q AND VORTICITY")
-startTime = time.time()
-case = GradientOfUnstructuredDataSet(Input=case)
-case.ScalarArray = ['POINTS', caseVarNames[indU]]
-case.ComputeGradient = 1
-case.ResultArrayName = 'AVVGR'
-case.ComputeVorticity = 1
-case.VorticityArrayName = 'OMEGA'
-case.ComputeQCriterion = 1
-case.QCriterionArrayName = 'QCRIT'
-case.UpdatePipeline()
-print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  # GRADIENT CALC
+  print("--|| NEK :: CALCULATING PRESS GRADIENT")
+  startTime = time.time()
+  case = GradientOfUnstructuredDataSet(Input=case)
+  case.ScalarArray = ['POINTS', caseVarNames[indP]]
+  case.ComputeGradient = 1
+  case.ResultArrayName = 'AVPGR'
+  case.ComputeVorticity = 0
+  case.VorticityArrayName = 'OMEGA'
+  case.ComputeQCriterion = 0
+  case.QCriterionArrayName = 'QCRIT'
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+  
+  print("--|| NEK :: CALCULATING AVVEL GRADIENT, Q AND VORTICITY")
+  startTime = time.time()
+  case = GradientOfUnstructuredDataSet(Input=case)
+  case.ScalarArray = ['POINTS', caseVarNames[indU]]
+  case.ComputeGradient = 1
+  case.ResultArrayName = 'AVVGR'
+  case.ComputeVorticity = 1
+  case.VorticityArrayName = 'OMEGA'
+  case.ComputeQCriterion = 1
+  case.QCriterionArrayName = 'QCRIT'
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 if("CPCF" in fileType):
   # CALCULATE CPCF
   print("--|| NEK :: CALCULATING CPCF")
@@ -435,107 +443,108 @@ startTime = time.time()
 (xmin,xmax,ymin,ymax,zmin,zmax) =  case.GetDataInformation().GetBounds()
 print("----|| INFO: BOX SIZE = %.2f %.2f %.2f %.2f %.2f %.2f"%(xmin,xmax,ymin,ymax,zmin,zmax))
 
-if("DFUSER" in geomType):
+if('2D' in avgDim or '1D' in avgDim):
+  if("DFUSER" in geomType):
+    slice1 = Slice(Input=case)
+    slice1.SliceType = 'Plane'
+    slice1.SliceOffsetValues = [0.0]
+    ## init the 'Plane' selected for 'SliceType'
+    slice1.SliceType.Origin = [0.0, 0.0, 0.0]
+    ## Properties modified on slice1.SliceType
+    slice1.SliceType.Normal = [1.0, 0.0, 0.0]
+    slice1.UpdatePipeline()
+    #------------------------------#
+    slice1 = Clip(Input=slice1)
+    slice1.ClipType = 'Plane'
+    slice1.ClipType.Origin = [0.0, 0.0, 0.0]
+    slice1.ClipType.Normal = [0.0, 1.0, 0.0]
+    slice1.UpdatePipeline()
   
-  slice1 = Slice(Input=case)
-  slice1.SliceType = 'Plane'
-  slice1.SliceOffsetValues = [0.0]
-  ## init the 'Plane' selected for 'SliceType'
-  slice1.SliceType.Origin = [0.0, 0.0, 0.0]
-  ## Properties modified on slice1.SliceType
-  slice1.SliceType.Normal = [1.0, 0.0, 0.0]
-  slice1.UpdatePipeline()
-  #------------------------------#
-  slice1 = Clip(Input=slice1)
-  slice1.ClipType = 'Plane'
-  slice1.ClipType.Origin = [0.0, 0.0, 0.0]
-  slice1.ClipType.Normal = [0.0, 1.0, 0.0]
-  slice1.UpdatePipeline()
-
-  Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
-  print("----|| ALYA :: WORKING WITH ",Nplane," PLANAR POINTS")
+    Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
+    print("----|| ALYA :: WORKING WITH ",Nplane," PLANAR POINTS")
+    
+    N = int(Ntotal/Nplane)
+    thMax = 2.0*np.pi; thMin = 0.0;
+    thMid = np.pi/2
+    zpos = np.arange(N)*(thMax-thMin)/(N-1)
+    print("----|| ALYA: WORKING WITH %d THETA-PLANES" % (len(zpos)))
+    print("----|| ALYA: DELTA-THETA = %f" % ((thMax-thMin)/(N-1)))
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
-  N = int(Ntotal/Nplane)
-  thMax = 2.0*np.pi; thMin = 0.0;
-  thMid = np.pi/2
-  zpos = np.arange(N)*(thMax-thMin)/(N-1)
-  print("----|| ALYA: WORKING WITH %d THETA-PLANES" % (len(zpos)))
-  print("----|| ALYA: DELTA-THETA = %f" % ((thMax-thMin)/(N-1)))
-  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-
-else:
-  slice1 = Slice(Input=case)
-  slice1.SliceType = 'Plane'
-  slice1.SliceOffsetValues = [0.0]
-  slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
-  slice1.SliceType.Normal = [0.0, 0.0, 1.0]
-  slice1.UpdatePipeline()
+  else:
+    slice1 = Slice(Input=case)
+    slice1.SliceType = 'Plane'
+    slice1.SliceOffsetValues = [0.0]
+    slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
+    slice1.SliceType.Normal = [0.0, 0.0, 1.0]
+    slice1.UpdatePipeline()
+    
+    Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
+    print("----|| INFO :: WORKING WITH ",Nplane," PLANAR POINTS")
+    
+    N = int(Ntotal/Nplane)
+    zmid = (zmin+zmax)/2
+    zpos = np.around(np.asarray(np.arange(N)*(zmax-zmin)/(N-1),dtype=np.double),decimals=zDec)
+    delta_z = (zmax-zmin)/(N-1)
+    print("----|| ALYA: WORKING WITH %d Z-PLANES" % (len(zpos)))
+    print("----|| ALYA: DELTA-Z = %f" % (delta_z))
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
-  Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
-  print("----|| INFO :: WORKING WITH ",Nplane," PLANAR POINTS")
+  ########### PERFORM AVERAGING ################
+  print("--|| NEK :: CREATING TRANSFORMATIONS")
+  startTime = time.time()
+  resample_transforms=list();
+  data=list();
   
-  N = int(Ntotal/Nplane)
-  zmid = (zmin+zmax)/2
-  zpos = np.around(np.asarray(np.arange(N)*(zmax-zmin)/(N-1),dtype=np.double),decimals=zDec)
-  delta_z = (zmax-zmin)/(N-1)
-  print("----|| ALYA: WORKING WITH %d Z-PLANES" % (len(zpos)))
-  print("----|| ALYA: DELTA-Z = %f" % (delta_z))
-  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-
-########### PERFORM AVERAGING ################
-print("--|| NEK :: CREATING TRANSFORMATIONS")
-startTime = time.time()
-resample_transforms=list();
-data=list();
-
-for i in range(N):
-	# create a new 'Transform'
-	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
-	# Properties modified on transform1.Transform
-	if("DFUSER" in geomType):
-	  transform1.Transform.Rotate = [0.0, 0.0, zpos[i]-thMid]
-	else:
-	  transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
-	try:  
-	 resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
-	except: 
-	 resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1)
-	resample_transforms.append(resampleWithDataset1)
-print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
-HideAll()
-
-
-## create a new 'Programmable Filter'
-print("--|| NEK: AVERAGING USING A PROGRAMMABLE FILTER")
-startTime = time.time()
-
-PF1 = ProgrammableFilter(Input=[slice1]+resample_transforms)
-### first input is the grid
-### the rest of them are data to be averaged
-PF1.Script = \
-"""
-#from vtk.numpy_interface import dataset_adapter as dsa
-#from vtk.numpy_interface import algorithms as algs
-import numpy as np
-
-varFull = []
-varFull = inputs[0].PointData.keys()
-print("----|| Alya - WORKING ON ARRAYS::",varFull)
-N=len(inputs)-1;
-print("--|| NEK: AVERAGING %d DATA-PLANES" % (N))
-
-for varName in varFull:
-   varName0=varName[0:5]
-   avg = 0.0*(inputs[0].PointData[varName])
-   for i in range(N):
-       d = inputs[i+1].PointData[varName]
-       avg = avg + d
-   avg = avg/N
-   output.PointData.append(avg,varName0)
-"""
-PF1.UpdatePipeline()
-print("--|| NEK: SPANWISE AVERAGING DONE. TIME =",time.time()-startTime,'sec')
-
+  for i in range(N):
+  	# create a new 'Transform'
+  	transform1 = Transform(Input=slice1,guiName="transform{}".format(i))
+  	# Properties modified on transform1.Transform
+  	if("DFUSER" in geomType):
+  	  transform1.Transform.Rotate = [0.0, 0.0, zpos[i]-thMid]
+  	else:
+  	  transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
+  	try:  
+  	 resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
+  	except: 
+  	 resampleWithDataset1 = ResampleWithDataset(SourceDataArrays=case,DestinationMesh=transform1)
+  	resample_transforms.append(resampleWithDataset1)
+  print("--|| NEK: TRANSFORMATION DONE. TIME =",time.time()-startTime,'sec')
+  HideAll()
+  
+  
+  ## create a new 'Programmable Filter'
+  print("--|| NEK: AVERAGING USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  
+  PF1 = ProgrammableFilter(Input=[slice1]+resample_transforms)
+  ### first input is the grid
+  ### the rest of them are data to be averaged
+  PF1.Script = \
+  """
+  #from vtk.numpy_interface import dataset_adapter as dsa
+  #from vtk.numpy_interface import algorithms as algs
+  import numpy as np
+  
+  varFull = []
+  varFull = inputs[0].PointData.keys()
+  print("----|| Alya - WORKING ON ARRAYS::",varFull)
+  N=len(inputs)-1;
+  print("--|| NEK: AVERAGING %d DATA-PLANES" % (N))
+  
+  for varName in varFull:
+     varName0=varName[0:5]
+     avg = 0.0*(inputs[0].PointData[varName])
+     for i in range(N):
+         d = inputs[i+1].PointData[varName]
+         avg = avg + d
+     avg = avg/N
+     output.PointData.append(avg,varName0)
+  """
+  PF1.UpdatePipeline()
+  print("--|| NEK: SPANWISE AVERAGING DONE. TIME =",time.time()-startTime,'sec')
+else:  
+  print("--|| NEK: SKIPPING PVIEW SPAN AVG")
 if('2D' in avgDim):
   #if("DFUSER" in geomType):
   #  # Convert the plane (x,y,z) to (z,r,th) plane
