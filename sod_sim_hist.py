@@ -57,8 +57,8 @@ eps_D   = data[startInd::,3];
 eps_T   = data[startInd::,4];
 Mmax    = data[startInd::,5];
 if(chkCnd):
-  maxRho    = data[startInd::,6]
-  maxMue    = data[startInd::,7]/visco;
+  maxRho  = data[startInd::,6]
+  maxMue  = data[startInd::,7]/visco;
   maxU    = data[startInd::,8];
   maxV    = data[startInd::,9];
   maxW    = data[startInd::,10];
@@ -111,16 +111,16 @@ if(chkCnd):
   plt.ylabel(ylab[0])
   plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
   #plt.gca().set_xticklabels([])
-  #------------------#
+  ##------------------#
+  #axs = fig.add_subplot(grid[1,0])
+  ##axs.plot(time,eps_S,linewidth=lw,label=r'$eps_S$')
+  #axs.plot(time,eps_S,linewidth=lw,label=r'$eps_T$')
+  #plt.xlabel(r'$t$')
+  #plt.ylabel(r'$eps_S$')
+  #plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
+  ##plt.gca().set_xticklabels([])
+  ##------------------#
   axs = fig.add_subplot(grid[1,0])
-  #axs.plot(time,eps_S,linewidth=lw,label=r'$eps_S$')
-  axs.plot(time,eps_S,linewidth=lw,label=r'$eps_T$')
-  plt.xlabel(r'$t$')
-  plt.ylabel(r'$eps_S$')
-  plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
-  #plt.gca().set_xticklabels([])
-  #------------------#
-  axs = fig.add_subplot(grid[2,0])
   #axs.plot(time,eps_S,linewidth=lw,label=r'$eps_S$')
   axs.plot(time,eps_D,linewidth=lw,label='')
   plt.xlabel(r'$t$')
@@ -128,7 +128,7 @@ if(chkCnd):
   plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
   #plt.gca().set_xticklabels([])
   #------------------#
-  axs = fig.add_subplot(grid[3,0])
+  axs = fig.add_subplot(grid[2,0])
   #axs.plot(time,eps_S,linewidth=lw,label=r'$eps_S$')
   axs.plot(time,eps_T,linewidth=lw,label=r'$eps_T$')
   plt.xlabel(r'$t$')
@@ -157,13 +157,13 @@ if(chkCnd):
   plt.title(r'$P_o=%.2f$'%po)
   #------------------#
   if('naca' in fileName):
-    axs = fig.add_subplot(grid[3,1])
+    axs = fig.add_subplot(grid[3,0])
     axs.plot(time_2,cl,linewidth=lw,label=r'$c_{l}$')
     plt.xlabel(r'$t$')
     plt.ylabel(r'$c_{l}$')
     plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
 
-    axs = fig.add_subplot(grid[3,2])
+    axs = fig.add_subplot(grid[3,1])
     axs.plot(time_2,cd,linewidth=lw,label=r'$c_{d}$')
     plt.xlabel(r'$t$')
     plt.ylabel(r'$c_{d}$')
@@ -191,6 +191,11 @@ if(chkCnd):
   axs.plot(time,maxW,linewidth=lw,label='')
   plt.xlabel(r'$t$')
   plt.ylabel(r'$max(w)/U_o$')
+  #------------------#
+  axs = fig.add_subplot(grid[3,2])
+  axs.plot(time,maxMue,linewidth=lw,label='')
+  plt.xlabel(r'$t$')
+  plt.ylabel(r'$max(\mu_e)/\mu_f$')
   #------------------#
   
   fig.tight_layout()
