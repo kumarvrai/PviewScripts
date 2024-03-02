@@ -233,31 +233,51 @@ elif("ALYA" in codeName):
 elif("SOD" in codeName):
   print("--|| INFO :: READING SOD2D ARRAYS")
   startTime = time.time()
-  fileName = 'results_AVG_'+caseName+'.hdf'
-  case = OpenDataFile(fileName)
-  case.UpdatePipeline()
-  print("--||SOD :: LOADED VARIABLES",case.PointData.keys())
-  ## create a new 'Programmable Filter and change names'
-  print("--|| SOD: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
-  startTime = time.time()
-  case = ProgrammableFilter(Input=case)
-  case.Script = \
-  """
-  import numpy as np
-  varNames0 = inputs[0].PointData.keys()
-  if("avrho" in varNames0):
-    rho = inputs[0].PointData["avrho"]
-  #---------------------------------#
-  for (i,var) in enumerate(varNames0):
-   avg = inputs[0].PointData[var]
-   outName = var.upper()
-   if(outName in ["AVVEL","AVVE2","AVVEX"]):
-     if("avrho" in varNames0):
-       avg = avg/rho
-   if("AVVEX" in outName):
-       outName = "AVVXY"
-   output.PointData.append(avg,outName)
-  """
+  if('AVG' in fileType):
+    fileName = 'results_AVG_'+caseName+'.hdf'
+    case = OpenDataFile(fileName)
+    case.UpdatePipeline()
+    print("--||SOD :: LOADED VARIABLES",case.PointData.keys())
+    ## create a new 'Programmable Filter and change names'
+    print("--|| SOD: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+    startTime = time.time()
+    case = ProgrammableFilter(Input=case)
+    case.Script = \
+    """
+    import numpy as np
+    varNames0 = inputs[0].PointData.keys()
+    if("avrho" in varNames0):
+      rho = inputs[0].PointData["avrho"]
+    #---------------------------------#
+    for (i,var) in enumerate(varNames0):
+     avg = inputs[0].PointData[var]
+     outName = var.upper()
+     if(outName in ["AVVEL","AVVE2","AVVEX"]):
+       if("avrho" in varNames0):
+         avg = avg/rho
+     if("AVVEX" in outName):
+         outName = "AVVXY"
+     output.PointData.append(avg,outName)
+    """
+  elif('INS' in fileType):
+    fileName = 'results_'+caseName+'.hdf'
+    case = OpenDataFile(fileName)
+    case.UpdatePipeline()
+    print("--||SOD :: LOADED VARIABLES",case.PointData.keys())
+    ## create a new 'Programmable Filter and change names'
+    print("--|| SOD: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+    startTime = time.time()
+    case = ProgrammableFilter(Input=case)
+    case.Script = \
+    """
+    import numpy as np
+    varNames0 = inputs[0].PointData.keys()
+    #---------------------------------#
+    for (i,var) in enumerate(varNames0):
+     avg = inputs[0].PointData[var]
+     outName = var.upper()
+     output.PointData.append(avg,outName)
+    """
   case.UpdatePipeline()
   print("--|| SOD :: DONE. TIME =",time.time()-startTime,'sec')
 elif("PVD" in codeName):
@@ -314,14 +334,16 @@ for var in varNames:
 case.UpdatePipeline()
 print("--|| NEK: DONE. TIME =",time.time()-startTime,'sec')
 
+(xmin,xmax,ymin,ymax,zmin,zmax) =  case.GetDataInformation().GetBounds()
+print("----|| INFO: BOX SIZE = %.2f %.2f %.2f %.2f %.2f %.2f"%(xmin,xmax,ymin,ymax,zmin,zmax))
+
 Ntotal = int(case.GetDataInformation().GetNumberOfPoints())
 print("----|| ALYA :: WORKING WITH ",Ntotal," TOTAL NUMBER OF POINTS")
 
 caseVarNames = case.PointData.keys()
-indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
-indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
-#if(codeName in str(["NEK","ALYA","SOD"])):
-if('SKIP' not in codeName):
+if("SKIP" not in codeName):
+  indU = int([i for i, s in enumerate(caseVarNames) if 'AVVEL' in s][0]);
+  indP = int([i for i, s in enumerate(caseVarNames) if 'AVPRE' in s][0]);
   indXX = int([i for i, s in enumerate(caseVarNames) if 'AVVE2' in s][0]);
   indXY = int([i for i, s in enumerate(caseVarNames) if 'AVVXY' in s][0]);
   print("--|| NEK :: CALCULATING R-STRESSES")
@@ -417,7 +439,10 @@ if('3D' in avgDim):
  # Save a 3D time averaged file
  #savePath = casePath+"/AvgData_3D.pvd"
  #savePath = casePath+"/AvgData_2D.vtm"
- savePath = casePath+"/AvgData_3D.csv"
+ if('AVG' in fileType):
+   savePath = casePath+"/AvgData_3D.csv"
+ elif('INS' in fileType):
+   savePath = casePath+"/InsData_3D.csv"
  SaveData(savePath, proxy=case)
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
  #slice1 = Slice(Input=case)
@@ -439,9 +464,6 @@ if('3D' in avgDim):
 
 print("--|| NEK :: EVALUATING DIMENSIONS FOR SPANWISE AVERAGE")
 startTime = time.time()
-
-(xmin,xmax,ymin,ymax,zmin,zmax) =  case.GetDataInformation().GetBounds()
-print("----|| INFO: BOX SIZE = %.2f %.2f %.2f %.2f %.2f %.2f"%(xmin,xmax,ymin,ymax,zmin,zmax))
 
 if('2D' in avgDim or '1D' in avgDim):
   if("DFUSER" in geomType):
@@ -470,7 +492,6 @@ if('2D' in avgDim or '1D' in avgDim):
     print("----|| ALYA: WORKING WITH %d THETA-PLANES" % (len(zpos)))
     print("----|| ALYA: DELTA-THETA = %f" % ((thMax-thMin)/(N-1)))
     print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
-  
   else:
     slice1 = Slice(Input=case)
     slice1.SliceType = 'Plane'
@@ -559,10 +580,14 @@ if('2D' in avgDim):
   #  savePath = casePath+"/AvgData_2D.pvd"
   else:
     savePath = casePath+"/AvgData_2D.vtp"
-  savePath = casePath+"/AvgData_2D.pvd"
+  if('AVG' in fileType):
+    savePath = casePath+"/AvgData_2D.pvd"
+  elif('INS' in fileType):
+    savePath = casePath+"/InsData_2D.pvd"
+  #savePath = casePath+"/AvgData_2D.pvd"
   SaveData(savePath, proxy=PF1)
-  savePath = casePath+"/AvgData_2D.csv"
-  SaveData(savePath, proxy=PF1)
+  #savePath = casePath+"/AvgData_2D.csv"
+  #SaveData(savePath, proxy=PF1)
   print("----|| NEK: 2D STATISTICS FILE WRITTEN AS: ",savePath)
 
   ########### STREAMWISE AVERAGING ################
@@ -641,7 +666,10 @@ if('1D' in avgDim):
   startTime = time.time()
   #savePath = casePath+"/AvgData_1D.vtm"
   #SaveData(savePath, proxy=PF1)
-  savePath = casePath+"/AvgData_1D.csv"
+  if('AVG' in fileType):
+    savePath = casePath+"/AvgData_1D.csv"
+  elif('AVG' in fileType):
+    savePath = casePath+"/InsData_1D.csv"
   SaveData(savePath, proxy=PF1)
   print("----|| NEK: 1D STATISTICS FILE WRITTEN AS: ",savePath)
   print("--|| NEK: FILE SAVED. TIME =",time.time()-startTime,'sec')
