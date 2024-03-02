@@ -22,6 +22,7 @@ def convert_to_float(frac_str):
 fileName = sys.argv[1]
 visco    = convert_to_float(sys.argv[2]);
 Lz       = convert_to_float(sys.argv[3]);
+strtTime = convert_to_float(sys.argv[4]);
 
 #-------------SIM CONSTS-------------#
 Cp        = 1004.0
@@ -49,7 +50,8 @@ chkCnd = (np.shape(data)[1] > 6)
 
 lw = 1.0
 
-startInd = 10;
+
+startInd = np.argmin(abs(data[:,0]-strtTime),axis=None);
 time    = data[startInd::,0];
 Ek      = data[startInd::,1];
 eps_S   = data[startInd::,2];
