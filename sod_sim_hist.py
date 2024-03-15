@@ -23,6 +23,7 @@ fileName = sys.argv[1]
 visco    = convert_to_float(sys.argv[2]);
 Lz       = convert_to_float(sys.argv[3]);
 strtTime = convert_to_float(sys.argv[4]);
+aoa      = convert_to_float(sys.argv[5]);
 
 #-------------SIM CONSTS-------------#
 Cp        = 1004.0
@@ -75,6 +76,16 @@ Fvx       = data_2[startInd::,6];
 Fvy       = data_2[startInd::,7];
 Fvz       = data_2[startInd::,8];
 
+Fpxx      = Fpx*np.cos(aoa*np.pi/180.0)+Fpy*np.sin(aoa*np.pi/180.0)
+Fpyy      = -Fpx*np.sin(aoa*np.pi/180.0)+Fpy*np.cos(aoa*np.pi/180.0)
+Fvxx      = Fvx*np.cos(aoa*np.pi/180.0)+Fvy*np.sin(aoa*np.pi/180.0)
+Fvyy      = -Fvx*np.sin(aoa*np.pi/180.0)+Fvy*np.cos(aoa*np.pi/180.0)
+
+Fpx = Fpxx
+Fpy = Fpyy
+Fvx = Fvxx
+Fvy = Fvyy
+
 
 if('pipe' in fileName):
  print("--||SOD :: Calculating utau for pipe")
@@ -86,7 +97,8 @@ elif('channel' in fileName):
  print("--||SOD :: time-average utau = ",np.mean(utau,axis=None))
 elif('naca' in fileName):
  print("--||SOD :: Calculating Cl/Cd for NACA")
- print("----||Fvx,Fpx,Fvy,Fpy = ",np.mean(Fvx,axis=None),np.mean(Fpx,axis=None),np.mean(Fvy,axis=None),np.mean(Fpy,axis=None))
+ print("--||SOD :: Calculating for AoA = ",aoa)
+ #print("----||Fvx,Fpx,Fvy,Fpy = ",np.mean(Fvx,axis=None),np.mean(Fpx,axis=None),np.mean(Fvy,axis=None),np.mean(Fpy,axis=None))
  cdp     = 2.0*(Fpx)/Lz
  cdv     = 2.0*(Fvx)/Lz
  cd      = 2.0*(Fvx+Fpx)/Lz
