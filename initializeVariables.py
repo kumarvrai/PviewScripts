@@ -1,5 +1,4 @@
 #!/usr/bin/python
-activate_this = '/home/u/ugo/kvishal/softwares/coolVenv/bin/activate_this.py'
 import os
 import glob
 import sys
@@ -9,6 +8,8 @@ import vtk
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 from paraview.vtk.numpy_interface import dataset_adapter as dsa
 from vtk.numpy_interface import algorithms as algs
+
+activate_this = os.environ["HOME"]+'/softwares/coolVenv/bin/activate_this.py'
 
 pyVer = sys.version_info[0]
 if pyVer < 3:

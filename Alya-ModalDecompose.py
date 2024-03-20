@@ -1,6 +1,6 @@
-initializeVars = '/home/u/ugo/kvishal/1.post_process/0.alya_pv_scripts/initializeVariables.py'
 import sys
 from paraview.simple import *
+initializeVars = os.environ["HOME"]+'/1.post_process/0.alya_pv_scripts/initializeVariables.py'
 pyVer = sys.version_info[0]
 if pyVer < 3:
   execfile(initializeVars)
