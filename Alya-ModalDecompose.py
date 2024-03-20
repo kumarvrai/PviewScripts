@@ -16,11 +16,31 @@ if any(idstr in MODE for idstr in ["POD","DMD"]):
   print("--|| ALYA :: READING ALYA ARRAYS", varName_code)
   startTime = time.time()
   case = OpenDataFile(IF)
-  try:
-   case.PointArrays = varName_code
-  except:
-   print('--|| ALYA: LOADING DEFAULT VARIABLES')
-  case.UpdatePipeline()
+  if('ALYA' in CODE):
+    try:
+     case.PointArrays = varName_code
+    except:
+     print('--|| ALYA: LOADING DEFAULT VARIABLES')
+    case.UpdatePipeline()
+  if('NEK' in CODE):
+    case.PointArrays = ['velocity','pressure']
+    case.UpdatePipeline()
+    ## create a new 'Programmable Filter and change names'
+    print("--|| NEK: CHANGING VARNAMES 1 USING A PROGRAMMABLE FILTER")
+    startTime = time.time()
+    case = ProgrammableFilter(Input=case)
+    case.Script = \
+    """
+    import numpy as np
+    varNames0 = ['velocity','pressure']
+    varNames1 = ['VELOC','PRESS']
+    for (i,var) in enumerate(varNames0):
+     outName = varNames1[i]
+     avg = (inputs[0].PointData[var])
+     output.PointData.append(avg,outName)
+    """
+    case.UpdatePipeline()
+    print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   reader = GetActiveSource()
   view = GetActiveView()
@@ -37,7 +57,7 @@ if any(idstr in MODE for idstr in ["POD","DMD"]):
     if(DIM==2):
       case = Calculator(Input=case)
       case.ResultArrayName = "VELOC"
-      case.Function = " VELOC_X*iHat+VELOC_Y*jHat+0*kHat"
+      case.Function = " VELOC_X*iHat+VELOC_Y*jHat+0*VELOC_X*kHat"
       case.UpdatePipeline()
   if box_clip:
     print("--|| ALYA :: APPLYING BOX-CLIP FILTER.")
@@ -58,21 +78,21 @@ if any(idstr in MODE for idstr in ["POD","DMD"]):
     #case.UpdatePipeline()
     #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   # TEMPORAL AVERAGING
-  print("--|| ALYA :: TEMPORAL AVERAGING OF CODE ARRAYS")
-  startTime = time.time()
-  case2 = TemporalStatistics(Input=case)
-  case2.ComputeMinimum = 0
-  case2.ComputeMaximum = 0
-  case2.ComputeStandardDeviation = 0
-  case2.UpdatePipeline()
-  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+  #print("--|| ALYA :: TEMPORAL AVERAGING OF CODE ARRAYS")
+  #startTime = time.time()
+  #case2 = TemporalStatistics(Input=case)
+  #case2.ComputeMinimum = 0
+  #case2.ComputeMaximum = 0
+  #case2.ComputeStandardDeviation = 0
+  #case2.UpdatePipeline()
+  #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
-  # APPEND DATASETS
-  print("--|| ALYA :: APPEND DATASETS")
-  startTime = time.time()
-  case = AppendAttributes(Input=[case,case2])
-  case.UpdatePipeline()
-  print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+  ## APPEND DATASETS
+  #print("--|| ALYA :: APPEND DATASETS")
+  #startTime = time.time()
+  #case = AppendAttributes(Input=[case,case2])
+  #case.UpdatePipeline()
+  #print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
   # CALCULATE EXTRA VARIABLES
   print("--|| ALYA :: CALCULATING EXTRA VARIABLES")
@@ -143,41 +163,47 @@ if any(idstr in MODE for idstr in ["POD","DMD"]):
   
   print("--|| ALYA :: CALCULATE CELL VOLUME")
   startTime = time.time()
-  PC1 = PythonCalculator(Input=PDtCD1)
+  case = PythonCalculator(Input=PDtCD1)
+  #case = PythonCalculator(Input=case)
   # Properties modified on pythonCalculator1
   if(DIM==3):
    if('pvd' in IF): 
-    PC1.Expression = 'area(inputs[0])'
+    case.Expression = 'area(inputs[0])'
    else:
-    PC1.Expression = 'volume(inputs[0])'
+    case.Expression = 'volume(inputs[0])'
   elif(DIM==2):
-   PC1.Expression = 'area(inputs[0])'
+   case.Expression = 'area(inputs[0])'
   else:
    raise ValueError("--|| ERROR: DIMESION NOT ACCURATE")
    
-  PC1.ArrayName = 'Volume'
-  PC1.UpdatePipeline()
+  case.ArrayName = 'Volume'
+  case.UpdatePipeline()
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
   # EXTRACT DATA AT SPECIFIC TIMES
   print("--|| ALYA :: EXTRACT TIME DATA")
-  dataSet = GroupTimeSteps(Input=PC1)  
-  dataSet.UpdatePipeline()
+  case = GroupTimeSteps(Input=case)  
+  case.UpdatePipeline()
   print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
   print("--|| ALYA :: PERFORM MODAL ANALYSIS AND APPEND DATA")
   startTime = time.time()
-  PF1 = ProgrammableFilter(Input=dataSet)
+  PF1 = ProgrammableFilter(Input=case)
   PF1.Script = \
 """
 np.set_printoptions(threshold=5000)
+inp0 = dsa.WrapDataObject(inputs[0].GetBlock(0))
+#inp0 = inputs[0].GetBlock(0)
 
 print("----|| ALYA :: MANUPULATE DATA")
+print("----|| INFO :: DIRECTORY OF OBJECT ", dir(inp0))
+print("----|| INFO :: BLOCK 0 CELL ARRAYS ", inp0.CellData.keys())
+print("----|| INFO :: BLOCK 0 POINT ARRAYS ", inp0.PointData.keys())
 startTime = time.time()
 
-if('pvd' in IF): 
+if('pvd' in IF):
   V = dsa.WrapDataObject(inputs[0].GetBlock(0)).CellData['Volume']
-else:
+else: 
   V = dsa.WrapDataObject(inputs[0].GetBlock(0)).CellData['Volume'].Arrays[0]
 
 V = vtk_to_numpy(V)
@@ -232,7 +258,7 @@ if do_POD:
  modes = POD_res.modes; eigen_vals = POD_res.eigvals
  eigen_vecs = POD_res.eigvecs; correlation_mat = POD_res.correlation_array
 
- #print(np.shape(modes),np.shape(eigen_vals),np.shape(eigen_vecs),np.shape(correlation_mat))
+ print(np.shape(modes),np.shape(eigen_vals),np.shape(eigen_vecs),np.shape(correlation_mat))
 
  print("----|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 
@@ -258,9 +284,9 @@ if do_POD:
      ##output.CellData.append(sclArr,"WPRES")
      ### ADD WEIGTH VECTORS FOR VELOCITY
      ##if('pvd' in IF): 
-     ##  vecArr = V[:,1:3]
+     ##  vecArr = V[:,1:DIM]
      ##else:
-     ##  vecArr.Arrays[0] = V[:,1:3]
+     ##  vecArr.Arrays[0] = V[:,1:DIM]
      ##output.CellData.append(vecArr,"WVELO")
      ##if("RS_II" in varName_calc):
      ## # ADD WEIGTH VECTORS FOR RS_IJ
@@ -281,10 +307,10 @@ if do_POD:
      if subtractAvg:
        if('pvd' in IF): 
          sclArr = fields_avg[:,0]
-         vecArr = fields_avg[:,1:3]
+         vecArr = fields_avg[:,1:DIM]
        else:
          sclArr.Arrays[0] = fields_avg[:,0]
-         vecArr.Arrays[0] = fields_avg[:,1:3]
+         vecArr.Arrays[0] = fields_avg[:,1:DIM]
        output.CellData.append(sclArr,"AVPRE")
        output.CellData.append(vecArr,"AVVEL")
        if("RS_II" in varName_calc):
@@ -300,6 +326,9 @@ if do_POD:
            vecArr.Arrays[0] = fields_avg[:,7:9]
          output.CellData.append(vecArr,"ARSIJ")
      
+     if(M_POD>np.shape(modes)[0]):
+       raise ValueError("--|| ERROR: YOU HAVE MORE MODES THAN SNAPS")
+
      # ADD MODES FOR ALL VARIABLES 
      for i in range(M_POD):
        # ADD PRESSURE MODE
@@ -310,9 +339,9 @@ if do_POD:
        output.CellData.append(sclArr,'POD_mode_{}_{}'.format("PRESS",i))
        # ADD VELOCITY MODE
        if('pvd' in IF): 
-         vecArr = modes[i,:,1:3]
+         vecArr = modes[i,:,1:DIM]
        else:
-         vecArr.Arrays[0] = modes[i,:,1:3]
+         vecArr.Arrays[0] = modes[i,:,1:DIM]
        output.CellData.append(vecArr,'POD_mode_{}_{}'.format("VELOC",i))
        if("RS_II" in varName_calc):
          # ADD RS_II MODE
@@ -524,9 +553,9 @@ if do_DMD:
      output.CellData.append(sclArr,"WPRES")
      # ADD WEIGTH VECTORS FOR VELOCITY
      if('pvd' in IF): 
-       vecArr = V[:,1:3]
+       vecArr = V[:,1:DIM]
      else:
-       vecArr.Arrays[0] = V[:,1:3]
+       vecArr.Arrays[0] = V[:,1:DIM]
      output.CellData.append(vecArr,"WVELO")
      if("RS_II" in varName_calc):
       # ADD WEIGTH VECTORS FOR RS_IJ
@@ -547,10 +576,10 @@ if do_DMD:
      if subtractAvg:
        if('pvd' in IF): 
          sclArr = fields_avg[:,0]
-         vecArr = fields_avg[:,1:3]
+         vecArr = fields_avg[:,1:DIM]
        else:
          sclArr.Arrays[0] = fields_avg[:,0]
-         vecArr.Arrays[0] = fields_avg[:,1:3]
+         vecArr.Arrays[0] = fields_avg[:,1:DIM]
        output.CellData.append(sclArr,"AVPRE")
        output.CellData.append(vecArr,"AVVEL")
        if("RS_II" in varName_calc):
@@ -574,9 +603,9 @@ if do_DMD:
        output.CellData.append(sclArr,'DMD_mode_{}_{}'.format("PRESS",i))
        # ADD VELOCITY MODE
        if('pvd' in IF): 
-         vecArr = modes[i,:,1:3]
+         vecArr = modes[i,:,1:DIM]
        else:
-         vecArr.Arrays[0] = modes[i,:,1:3]
+         vecArr.Arrays[0] = modes[i,:,1:DIM]
        output.CellData.append(vecArr,'DMD_mode_{}_{}'.format("VELOC",i))
        if("RS_II" in varName_calc):
          # ADD RS_II MODE

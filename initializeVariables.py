@@ -100,8 +100,8 @@ prefix="Re40_"
 # True= read data from case files; 
 # False= read data from fields.npz
 read_fields_from_file = True
-calculate_pod_slice   = False
-box_clip              = True
+calculate_pod_slice   = True
+box_clip              = False
 # Variable interpolation form= %(NAME)s is available
 fields_filename="""{}fields_{}.npz""".format(OD,fieldname)
 geom_filename="""{}Geometry.vtu""".format(OD)
@@ -118,7 +118,7 @@ else:
 # accuracy determines how many modes will be calculated.
 accuracy=0.9999
 # spatial mode to be calculated, M=0 means determined by program according to accuracy
-M_POD = 20
+M_POD = 2
 #
 subtractAvg = True
 #
