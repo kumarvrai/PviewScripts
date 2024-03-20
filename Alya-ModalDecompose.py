@@ -1,3 +1,4 @@
+import os
 import sys
 from paraview.simple import *
 initializeVars = os.environ["HOME"]+'/1.post_process/0.alya_pv_scripts/initializeVariables.py'
