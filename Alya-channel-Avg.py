@@ -411,11 +411,12 @@ if("CPCF" in fileType):
   #case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCF"
-  case_clcd.Function = "%s*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"%visc
+  #case_clcd.Function = "%s*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"%visc
+  case_clcd.Function = "2.0*%s*(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals))"%visc
   case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCP"
-  case_clcd.Function = "AVPRE"
+  case_clcd.Function = "2.0*AVPRE"
   case_clcd.UpdatePipeline()
   savePath = casePath+"/NekBndData_1D.csv"
   #SaveData(savePath, proxy=case_clcd)

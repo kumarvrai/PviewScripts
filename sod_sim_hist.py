@@ -38,6 +38,7 @@ mul       = (rho0*delta*vo)/Re
 Rgas      = Cp*(gamma_gas-1.0)/gamma_gas
 to        = vo*vo/(gamma_gas*Rgas*M*M)
 po        = rho0*Rgas*to
+po        = 1.0
 
 #-------------------------------------#
 file_1 = 'analysis_'+fileName+'.dat';
@@ -53,6 +54,7 @@ lw = 1.0
 
 
 startInd = np.argmin(abs(data[:,0]-strtTime),axis=None);
+print('--||NEK :: Plotting Shape ',np.shape(data[startInd::,0]))
 time    = data[startInd::,0];
 Ek      = data[startInd::,1];
 eps_S   = data[startInd::,2];
@@ -171,14 +173,20 @@ if(chkCnd):
   plt.title(r'$P_o=%.2f$'%po)
   #------------------#
   if('naca' in fileName):
+    po = 5;
+    print("--||SOD :: BEST-FIT PORDER = ",po)
+    pFit = np.poly1d(np.polyfit(time_2, cl, po))
     axs = fig.add_subplot(grid[3,0])
     axs.plot(time_2,cl,linewidth=lw,label=r'$c_{l}$')
+    plt.plot(time_2,pFit(time_2),'k--',linewidth=lw)
     plt.xlabel(r'$t$')
     plt.ylabel(r'$c_{l}$')
     plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
 
+    pFit = np.poly1d(np.polyfit(time_2, cd, po))
     axs = fig.add_subplot(grid[3,1])
     axs.plot(time_2,cd,linewidth=lw,label=r'$c_{d}$')
+    plt.plot(time_2, pFit(time_2),'k--',linewidth=lw)
     plt.xlabel(r'$t$')
     plt.ylabel(r'$c_{d}$')
     plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
