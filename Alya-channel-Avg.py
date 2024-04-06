@@ -412,7 +412,10 @@ if("CPCF" in fileType):
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCF"
   #case_clcd.Function = "%s*sqrt(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)^2+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals)^2)"%visc
-  case_clcd.Function = "2.0*%s*(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals))"%visc
+  if('SOD' in codeName):
+    case_clcd.Function = "2.0*AVMUE*(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals))"
+  else:  
+    case_clcd.Function = "2.0*%s*(dot((""AVVGR_0""*iHat+""AVVGR_1""*jHat),-Normals)+dot((""AVVGR_3""*iHat+""AVVGR_4""*jHat),-Normals))"%visc
   case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCP"
