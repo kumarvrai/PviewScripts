@@ -67,6 +67,19 @@ print('--||SOD :: Theory PG  ',utau*utau*rho/delta);
 x   = les[:,iX];
 y   = les[:,iX+1];
 z   = les[:,iX+2];
+
+x = np.around(x,decimals);
+y = np.around(y,decimals);
+z = np.around(z,decimals);
+
+xyz = np.column_stack((x,y,z))
+xyz,indx = np.unique(xyz,return_index=True, axis=0)
+
+les = les[indx,:];
+
+x   = les[:,iX];
+y   = les[:,iX+1];
+z   = les[:,iX+2];
 u   = les[:,iU];
 v   = les[:,iU+1];
 w   = les[:,iU+2];
