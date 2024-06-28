@@ -9,13 +9,12 @@ import numpy as np
 from scipy.interpolate import griddata
 
 avgStr = sys.argv[1]
-Retau = float(sys.argv[2])
+Retau = float(sys.argv[2]) #Re_theta value
 fileName = sys.argv[3]
 
-strIdx = 10000;
+strIdx = 100;
 
-#SOD_DIR='/home/kumarv/research/1.sod2d/1.channel/'
-SOD_DIR='/vast/projects/nek/kumarv/2.sod2d/4.bl_rl/'
+SOD_DIR='~/0.alya_pv_scripts/0.dns_data/blayer/'
 decimals=3
 
 plt.close("all");
