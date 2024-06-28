@@ -92,7 +92,7 @@ Fvy = Fvyy
 if('pipe' in fileName):
  print("--||SOD :: Calculating utau for pipe")
  utau      = np.sqrt(abs(Fvz/area))
- print("--||SOD :: time-average utau =%f",np.mean(utau,axis=None))
+ print("--||SOD :: time-average utau = ",np.mean(utau,axis=None))
 elif('channel' in fileName):
  print("--||SOD :: Calculating utau for channel")
  utau      = np.sqrt(abs(Fvx/area))
@@ -191,7 +191,7 @@ if(chkCnd):
     plt.ylabel(r'$c_{d}$')
     plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
   else:
-    axs = fig.add_subplot(grid[3,1:2])
+    axs = fig.add_subplot(grid[3,:-1])
     axs.plot(time_2,utau,linewidth=lw,label=r'$u_{\tau}$')
     #axs[2,1].plot(time,Fy,linewidth=lw,label=r'$F_y$')
     plt.xlabel(r'$t$')
@@ -248,14 +248,20 @@ else:
   plt.xlabel(r'$t$')
   plt.ylabel(ylab[4])
   if('naca' in fileName):
+    po = 5;
+    print("--||SOD :: BEST-FIT PORDER = ",po)
+    pFit = np.poly1d(np.polyfit(time_2, cl, po))
     axs = fig.add_subplot(grid[2,0])
     axs.plot(time_2,cl,linewidth=lw,label=r'$c_{l}$')
+    plt.plot(time_2,pFit(time_2),'k--',linewidth=lw)
     plt.xlabel(r'$t$')
     plt.ylabel(r'$c_{l}$')
     plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))
 
+    pFit = np.poly1d(np.polyfit(time_2, cd, po))
     axs = fig.add_subplot(grid[2,1])
     axs.plot(time_2,cd,linewidth=lw,label=r'$c_{d}$')
+    plt.plot(time_2, pFit(time_2),'k--',linewidth=lw)
     plt.xlabel(r'$t$')
     plt.ylabel(r'$c_{d}$')
     plt.ticklabel_format(axis='y', style='sci',scilimits=(0,0))

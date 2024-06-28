@@ -28,6 +28,9 @@ mpl.rcParams['ytick.minor.width'] = 2;
 indices=['Points:0','AVVEL:0','AVPRE','AVVE2:0','AVVXY:0','AVVGR:0'];
 index_var = np.zeros(len(indices),dtype=int);
 
+SOD_DIR='/scratch/u/ugo/kvishal/research/0.Alya/4.CHAN/'
+dns = np.loadtxt(SOD_DIR+'Re950_DNS.dat', delimiter=','); 
+
 fid = open('AvgData_3D.csv'); 
 var = fid.readline();
 var = var.replace('"','')
@@ -321,76 +324,76 @@ for j in range(len(ylin)):
     #print('{},{},{}'.format(ylin[j],bl_ystar[j],bl_ustar[j]));
 f.close()
 
-# bl plots
+#plots
+lbl = r'$N_x={} \; N_y={} \;  N_z={}$'.format(len(xlin),len(ylin),len(zlin))
 
-#SOD_DIR='/scratch/u/ugo/kvishal/research/0.Alya/4.CHAN/'
-#dns = np.loadtxt(SOD_DIR+'Re950_DNS.dat', delimiter=','); 
-#
-#
-## U + 
-#fig=plt.figure(1, figsize=(8, 6), dpi=80)
-#
-#plt.plot(bl_ystar[1:],bl_ustar[1:],'b',linewidth=3.0,label='SEM: p=3, fp 32, 42x42x42')
-#plt.plot(dns[:,1],dns[:,2],'k--',linewidth=3.0,label='DNS')
-#plt.axis([0.1, 2000, 0, 30 ])
-#plt.xscale('log')
-#plt.ylabel(r'$U^+$')
-#plt.xlabel(r'$y^+$')
-#plt.tight_layout()
-#ax = fig.add_subplot(111)
-#legend = ax.legend(loc='upper left', fontsize=11)
-#for axis in ['top','bottom','left','right']:
-#  ax.spines[axis].set_linewidth(2)
-##plt.show()
-#plt.savefig('Alya_U+.png')
-#
-#
-## Urms + 
-#fig=plt.figure(2, figsize=(8, 6), dpi=80)
-#
-#plt.plot(bl_ystar[1:],bl_uustar[1:],'b',linewidth=3.0,label='SEM: p=3, fp 32, 42x42x42')
-#plt.plot(dns[1:,1],dns[1:,3],'k--',linewidth=3.0,label='DNS')
-#plt.axis([0.1, 2000, 0, 3.5])
-#plt.xscale('log')
-#plt.ylabel(r'$U^{\prime +}$')
-#plt.xlabel(r'$y^+$')
-#plt.tight_layout()
-#ax = fig.add_subplot(111)
-#legend = ax.legend(loc='upper right', fontsize=11)
-#for axis in ['top','bottom','left','right']:
-#  ax.spines[axis].set_linewidth(2)
-##plt.show()
-#plt.savefig('Alya_Urms+.png')
+# U + 
+fig=plt.figure(1, figsize=(8, 6), dpi=300)
+
+plt.plot(bl_ystar[1:],bl_ustar[1:],'b',linewidth=3.0,label=lbl)
+plt.plot(dns[:,1],dns[:,2],'k--',linewidth=3.0,label='DNS')
+plt.axis([0.1, 2000, 0, 30 ])
+plt.xscale('log')
+plt.ylabel(r'$U^+$')
+plt.xlabel(r'$y^+$')
+plt.tight_layout()
+ax = fig.add_subplot(111)
+legend = ax.legend(loc='upper left', fontsize=11)
+for axis in ['top','bottom','left','right']:
+  ax.spines[axis].set_linewidth(2)
+#plt.show()
+plt.savefig('U+.png')
 
 
-# # Vrms + 
-# fig=plt.figure(3, figsize=(6, 8), dpi=80)
+# Urms + 
+fig=plt.figure(2, figsize=(8, 6), dpi=300)
 
-# plt.plot(bl_ystar[1:],bl_vvstar[1:],'b',linewidth=3.0,label='FR P5: Roe, 106x111x106')
-# plt.plot(dns[:,1],dns[:,4],'k--',linewidth=3.0,label='DNS')
-# plt.axis([0, 1000, 0, 1.5])
-# plt.ylabel(r'$V^{\prime +}$')
-# plt.xlabel(r'$y^+$')
-# plt.tight_layout()
-# ax = fig.add_subplot(111)
-# legend = ax.legend(loc='upper right', fontsize=11)
-# for axis in ['top','bottom','left','right']:
-#   ax.spines[axis].set_linewidth(2)
-# plt.show()
-# plt.savefig('Vrms+.png')
+plt.plot(bl_ystar[1:],bl_uustar[1:],'b',linewidth=3.0,label=lbl)
+plt.plot(dns[1:,1],dns[1:,3],'k--',linewidth=3.0,label='DNS')
+plt.plot(bl_ystar[1:],bl_vvstar[1:],'r',linewidth=3.0)
+plt.plot(dns[:,1],dns[:,4],'k--',linewidth=3.0)
+plt.plot(bl_ystar[1:],bl_wwstar[1:],'g',linewidth=3.0)
+plt.plot(dns[:,1],dns[:,5],'k--',linewidth=3.0)
+plt.axis([0.1, 2000, 0, 3.5])
+plt.xscale('log')
+plt.ylabel(r'$U^{\prime +}$')
+plt.xlabel(r'$y^+$')
+plt.tight_layout()
+ax = fig.add_subplot(111)
+legend = ax.legend(loc='upper right', fontsize=11)
+for axis in ['top','bottom','left','right']:
+  ax.spines[axis].set_linewidth(2)
+#plt.show()
+plt.savefig('Urms+.png')
 
-# # Wrms + 
-# fig=plt.figure(4, figsize=(6, 8), dpi=80)
+# UVrms + 
+fig=plt.figure(5, figsize=(8, 6), dpi=300)
 
-# plt.plot(bl_ystar[1:],bl_wwstar[1:],'b',linewidth=3.0,label='FR P5: Roe, 106x111x106')
-# plt.plot(dns[:,1],dns[:,5],'k--',linewidth=3.0,label='DNS')
-# plt.axis([0, 1000, 0, 2])
-# plt.ylabel(r'$W^{\prime +}$')
-# plt.xlabel(r'$y^+$')
-# plt.tight_layout()
-# ax = fig.add_subplot(111)
-# legend = ax.legend(loc='upper right', fontsize=11)
-# for axis in ['top','bottom','left','right']:
-#   ax.spines[axis].set_linewidth(2)
-# plt.show()
-# plt.savefig('Wrms+.png')
+plt.plot(bl_ystar[1:],-bl_uvstar[1:],'b',linewidth=3.0,label=lbl)
+plt.plot(dns[:,1],dns[:,5],'k--',linewidth=3.0,label='DNS')
+plt.axis([0.1, 2000, 0, 2])
+plt.xscale('log')
+plt.ylabel(r'$U^{\prime}V^{\prime +}$')
+plt.xlabel(r'$y^+$')
+plt.tight_layout()
+ax = fig.add_subplot(111)
+legend = ax.legend(loc='upper right', fontsize=11)
+for axis in ['top','bottom','left','right']:
+  ax.spines[axis].set_linewidth(2)
+plt.show()
+plt.savefig('UVrms+.png')
+
+# U  
+fig=plt.figure(3, figsize=(8, 6), dpi=300)
+
+plt.plot(ylin,bl_u,'b',linewidth=3.0,label=lbl)
+plt.plot(dns[:,0],utauDNS*dns[:,2],'k--',linewidth=3.0,label='DNS')
+plt.ylabel(r'$U$')
+plt.xlabel(r'$y$')
+plt.tight_layout()
+ax = fig.add_subplot(111)
+legend = ax.legend(loc='upper left', fontsize=11)
+for axis in ['top','bottom','left','right']:
+  ax.spines[axis].set_linewidth(2)
+#plt.show()
+plt.savefig('U.png')
