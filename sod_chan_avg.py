@@ -28,7 +28,7 @@ mpl.rcParams['ytick.minor.width'] = 2;
 indices=['Points:0','AVVEL:0','AVPRE','AVVE2:0','AVVXY:0','AVVGR:0'];
 index_var = np.zeros(len(indices),dtype=int);
 
-SOD_DIR='/scratch/u/ugo/kvishal/research/0.Alya/4.CHAN/'
+SOD_DIR='/vast/projects/nek/kumarv/2.sod2d/1.channel/'
 dns = np.loadtxt(SOD_DIR+'Re950_DNS.dat', delimiter=','); 
 
 fid = open('AvgData_3D.csv'); 
@@ -369,7 +369,7 @@ plt.savefig('Urms+.png')
 # UVrms + 
 fig=plt.figure(5, figsize=(8, 6), dpi=300)
 
-plt.plot(bl_ystar[1:],-bl_uvstar[1:],'b',linewidth=3.0,label=lbl)
+plt.plot(bl_ystar[1:],abs(bl_uvstar[1:]),'b',linewidth=3.0,label=lbl)
 plt.plot(dns[:,1],dns[:,5],'k--',linewidth=3.0,label='DNS')
 plt.axis([0.1, 2000, 0, 2])
 plt.xscale('log')
