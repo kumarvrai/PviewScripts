@@ -440,6 +440,8 @@ if("CPCF" in fileType):
 
 ########### 3D STATISTICS ###################
 if('3D' in avgDim):
+ #case=PointDatatoCellData(Input=case)
+ #case.UpdatePipeline()
  # Save a 3D time averaged file
  #savePath = casePath+"/AvgData_3D.pvd"
  #savePath = casePath+"/AvgData_2D.vtm"
@@ -448,6 +450,7 @@ if('3D' in avgDim):
  elif('INS' in fileType):
    savePath = casePath+"/InsData_3D.csv"
  SaveData(savePath, proxy=case)
+ #SaveData(savePath, proxy=case, FieldAssociation='Cell Data')
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
  #slice1 = Slice(Input=case)
  #slice1.SliceType = 'Plane'
@@ -501,19 +504,30 @@ if('2D' in avgDim or '1D' in avgDim):
     slice1.SliceType = 'Plane'
     slice1.SliceOffsetValues = [0.0]
     slice1.SliceType.Origin = [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2]
-    slice1.SliceType.Normal = [0.0, 0.0, 1.0]
+    if("X" in geomType):
+      slice1.SliceType.Normal = [1.0, 0.0, 0.0]
+    else:  
+      slice1.SliceType.Normal = [0.0, 0.0, 1.0]
     slice1.UpdatePipeline()
     
     Nplane = int(slice1.GetDataInformation().GetNumberOfPoints())
     print("----|| INFO :: WORKING WITH ",Nplane," PLANAR POINTS")
     
     N = int(Ntotal/Nplane)
-    zmid = (zmin+zmax)/2
-    zpos = np.around(np.asarray(np.arange(N)*(zmax-zmin)/(N-1),dtype=np.double),decimals=zDec)
-    delta_z = (zmax-zmin)/(N-1)
-    print("----|| ALYA: WORKING WITH %d Z-PLANES" % (len(zpos)))
-    print("----|| ALYA: DELTA-Z = %f" % (delta_z))
-    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+    if("X" in geomType):
+      zmid = (xmin+xmax)/2
+      zpos = np.around(np.asarray(np.arange(N)*(xmax-xmin)/(N-1),dtype=np.double),decimals=zDec)
+      delta_z = (xmax-xmin)/(N-1)
+      print("----|| ALYA: WORKING WITH %d X-PLANES" % (len(zpos)))
+      print("----|| ALYA: DELTA-X = %f" % (delta_z))
+      print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
+    else:
+      zmid = (zmin+zmax)/2
+      zpos = np.around(np.asarray(np.arange(N)*(zmax-zmin)/(N-1),dtype=np.double),decimals=zDec)
+      delta_z = (zmax-zmin)/(N-1)
+      print("----|| ALYA: WORKING WITH %d Z-PLANES" % (len(zpos)))
+      print("----|| ALYA: DELTA-Z = %f" % (delta_z))
+      print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
   ########### PERFORM AVERAGING ################
   print("--|| NEK :: CREATING TRANSFORMATIONS")
@@ -528,7 +542,10 @@ if('2D' in avgDim or '1D' in avgDim):
   	if("DFUSER" in geomType):
   	  transform1.Transform.Rotate = [0.0, 0.0, zpos[i]-thMid]
   	else:
-  	  transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
+  	  if("X" in geomType):
+  	    transform1.Transform.Translate = [zpos[i]-zmid, 0.0, 0.0]
+  	  else:  
+  	    transform1.Transform.Translate = [0.0, 0.0, zpos[i]-zmid]
   	try:  
   	 resampleWithDataset1 = ResampleWithDataset(Input=case,Source=transform1)
   	except: 
