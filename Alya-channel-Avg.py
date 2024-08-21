@@ -607,9 +607,32 @@ if('2D' in avgDim):
     savePath = casePath+"/InsData_2D.pvd"
   #savePath = casePath+"/AvgData_2D.pvd"
   SaveData(savePath, proxy=PF1)
-  #savePath = casePath+"/AvgData_2D.csv"
-  #SaveData(savePath, proxy=PF1)
+  savePath = casePath+"/AvgData_2D.csv"
+  SaveData(savePath, proxy=PF1)
   print("----|| NEK: 2D STATISTICS FILE WRITTEN AS: ",savePath)
+
+  SetActiveSource(PF1)            
+  Show(PF1)
+  SetActiveView(GetActiveView())
+  QuerySelect(QueryString='(mag(AVVEL) <= 1e-6)', FieldType='POINT', InsideOut=0)
+  case_clcd = ExtractSelection(Input=PF1)
+  case_clcd.UpdatePipeline()
+  case_clcd = Calculator(Input=case_clcd)
+  case_clcd.ResultArrayName = "AVGCF"
+  if('SOD' in codeName):
+    case_clcd.Function = "2.0*AVMUE*(mag((""AVVGR_0""*iHat+""AVVGR_1""*jHat)+(""AVVGR_3""*iHat+""AVVGR_4""*jHat)))"
+  case_clcd.UpdatePipeline()
+  case_clcd = Calculator(Input=case_clcd)
+  case_clcd.ResultArrayName = "AVGCP"
+  case_clcd.Function = "2.0*AVPRE"
+  case_clcd.UpdatePipeline()
+  savePath = casePath+"/NekBndData_1D.csv"
+  #SaveData(savePath, proxy=case_clcd)
+  SaveData(savePath, proxy=case_clcd,ChooseArraysToWrite=1,
+                     PointDataArrays=['AVGCF', 'AVGCP'],
+                     UseScientificNotation=1)
+  print("----|| NEK: 1D CPCF FILE WRITTEN AS: ",savePath)
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
   ########### STREAMWISE AVERAGING ################
 if('1D' in avgDim):

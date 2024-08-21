@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import sys
 import os
+from scipy.interpolate import griddata
+#import seaborn as sns
+import scipy.signal as signal
+from scipy.interpolate import interp1d
 
 #------------------------------------#
 def convert_to_float(frac_str):
@@ -17,6 +21,52 @@ def convert_to_float(frac_str):
             whole = 0
         frac = float(num) / float(denom)
         return whole - frac if whole < 0 else whole + frac
+
+def calcSpectra(f, nWindows, iPeriodic):
+  n = len(f)
+  n = n//nWindows
+  print('--|| FFT INFO : WINDOW SIGNAL LENGTH={}'.format(n))
+  
+  wss = 0.
+  if iPeriodic:
+    print('--||INFO :: SIGNAL PERIODIC, NO WINDOWING')
+  else:
+    wss = sum(np.hanning(n))
+  
+  for iWindow in range(0, nWindows, 1):
+    #print('data window: {}'.format(iWindow))
+    #print('start index: {}, end index: {}'.format(iWindow*n, (iWindow+1)*n-1))
+    fx = f[iWindow*n:(iWindow+1)*n]
+  
+    if iPeriodic:
+      fk = np.fft.fft(fx)
+    else:
+      wx = np.hanning(n)*fx
+      fk = np.fft.fft(wx)
+    
+    if (n % 2) == 0:
+      #Mind the odd-ball wavenumber, not considered here
+      afk = 2*(np.abs(fk[0:(n//2+1)])/n)
+      pfk = 2*(np.abs(fk[0:(n//2+1)])/n)**2
+    else:
+      afk = 2*(np.abs(fk[0:((n-1)//2+1)])/n)
+      pfk = 2*(np.abs(fk[0:((n-1)//2+1)])/n)**2
+  
+    if iWindow==0:
+      afks = afk
+      pfks = pfk
+    else:
+      afks = afks + afk
+      pfks = pfks + pfk
+  
+  afks = afks/nWindows
+  pfks = pfks/nWindows
+  pfks = pfks/(wss/n)
+  
+  afks[0] = 0.5*afks[0]
+  pfks[0] = 0.5*pfks[0]
+  
+  return afks, pfks
 #------------------------------------#
 
 fileName = sys.argv[1]
@@ -25,6 +75,8 @@ Lz       = convert_to_float(sys.argv[3]);
 strtTime = convert_to_float(sys.argv[4]);
 aoa      = convert_to_float(sys.argv[5]);
 
+calc_psd=1;
+mode='FFT'
 #-------------SIM CONSTS-------------#
 Cp        = 1004.0
 Prt       = 0.71
@@ -38,7 +90,7 @@ mul       = (rho0*delta*vo)/Re
 Rgas      = Cp*(gamma_gas-1.0)/gamma_gas
 to        = vo*vo/(gamma_gas*Rgas*M*M)
 po        = rho0*Rgas*to
-po        = 1.0
+#po        = 1.0
 
 #-------------------------------------#
 file_1 = 'analysis_'+fileName+'.dat';
@@ -275,3 +327,64 @@ else:
   plt.tight_layout()
   plt.savefig('sod_analysis.png')
   #plt.show()
+
+if(calc_psd):
+  print('--|| NEK :: CALCULATE POWER SPECTRA (PSD).')
+  if('naca' in fileName):
+    scale=np.sin(aoa*np.pi/180.0);
+    cd_data = cd
+  else:  
+    scale=1.0;
+    cd_data = utau**2
+  indx = range(0,len(cd_data),1)
+  tSignal=time_2[indx]
+  ySignal=cd_data[indx]
+  print('--|| INFO :: Total samples',len(ySignal))
+  freq_min = 0.01; freq_max = 1.0;
+  if('LOMB' in mode):
+    nout = 10000;
+    f = np.linspace(freq_min, freq_max, nout)
+    pgram = signal.lombscargle(tSignal, ySignal, f)
+  elif('FFT' in mode):
+    delta_t = np.amax(np.diff(tSignal),axis=None)
+    s_rate = 1.0/delta_t
+    print('----|| INFO :: SAMPLING FREQ = %.2f'% s_rate)
+    Nt = int((np.amax(tSignal,axis=None)-np.amin(tSignal,axis=None))/delta_t)+1
+    print('----|| INFO :: INTERPOLATING ON %d POINTS'%(Nt))
+    print('--|| ALYA :: INTERPOLATE CONSTANT TIME.')
+    fInterp = interp1d(tSignal,ySignal);
+    tSignal = np.linspace(np.amin(tSignal,axis=None),np.amax(tSignal,axis=None),Nt);
+    ySignal = fInterp(tSignal)
+    hann_size = 1    
+    amp,power = calcSpectra(ySignal, hann_size, 0)
+    pgram=amp
+    #pgram = np.fft.fft(ySignal)
+    N = len(pgram); print('--|| INFO :: FFT LENGTH = %d'%N) 
+    n = np.arange(N); 
+    T = float(N)/s_rate; 
+    f = 0.5*n/T
+    #plt.stem(f, np.abs(pgram), 'b', \
+    # markerfmt=" ", basefmt="-b")
+    #plt.ylabel(r'$P_{u^\prime u^\prime}$')
+    #ax.set(xlim=(0, 10))
+  else:
+    raise ValueError('ALYA ERROR :: METHOD TO CALC PSD NOT SPECIFIED!')
+  
+  #---plot PSD----#
+  #indx=np.where(np.logical_and(f>0.001,f<1))
+  fig=plt.figure(6, figsize=(8, 6))
+  ax=plt.subplot(111)
+  ax.plot(scale*f, pgram, 'k',linewidth=1.0)
+  
+  plt.xlabel(r'$St$')
+  plt.ylabel(r'$PSD(C_f)$')
+  plt.tight_layout()
+  ax.set_yscale("log")
+  ax.set_xscale("log")
+  #ax.set_xlim(left=2e-3,right=8e-1)
+  #ax.set_ylim(bottom=1e-4,top=1e1)
+  for axis in ['top','bottom','left','right']:
+    ax.spines[axis].set_linewidth(2)
+  #fig.patch.set_alpha(0.5)  
+  #plt.savefig('fft_hist.png', transparent=False)
+  plt.savefig('sod_fft_hist.png')
