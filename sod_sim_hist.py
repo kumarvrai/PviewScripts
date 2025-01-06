@@ -75,6 +75,8 @@ Lz       = convert_to_float(sys.argv[3]);
 strtTime = convert_to_float(sys.argv[4]);
 aoa      = convert_to_float(sys.argv[5]);
 
+#caseType = sys.argv[6]
+
 calc_psd=1;
 mode='FFT'
 #-------------SIM CONSTS-------------#
@@ -145,7 +147,7 @@ if('pipe' in fileName):
  print("--||SOD :: Calculating utau for pipe")
  utau      = np.sqrt(abs(Fvz/area))
  print("--||SOD :: time-average utau = ",np.mean(utau,axis=None))
-elif('channel' in fileName):
+elif('channel' in fileName or 'bl' in fileName):
  print("--||SOD :: Calculating utau for channel")
  utau      = np.sqrt(abs(Fvx/area))
  print("--||SOD :: time-average utau = ",np.mean(utau,axis=None))
@@ -269,7 +271,7 @@ if(chkCnd):
   axs = fig.add_subplot(grid[3,2])
   axs.plot(time,maxMue,linewidth=lw,label='')
   plt.xlabel(r'$t$')
-  plt.ylabel(r'$max(\mu_e)/\mu_f$')
+  plt.ylabel(r'$max(\mu_{eff})/\mu_f$')
   #------------------#
   
   fig.tight_layout()

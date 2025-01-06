@@ -35,7 +35,7 @@ geomType	= sys.argv[5]
 rotDeg		= float(sys.argv[6])
 visc		= convert_to_float(sys.argv[7])
 
-zDec = 6; xDec = 6
+zDec = 4; xDec = 4
 xc = 1.0; yc = 0.0; rot=np.radians(rotDeg);
 casePath = os.getcwd()
 
@@ -160,6 +160,31 @@ if('NEK' in codeName):
     """
     case.UpdatePipeline()
     print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+elif('NRANS' in codeName):
+  print("--|| NEK :: READING NEK5000 ARRAYS")
+  startTime = time.time()
+  
+  fileName = 'avg'+caseName+'.nek5000'
+  case = OpenDataFile(fileName)
+  case.PointArrays = ['velocity','pressure','temperature','s1','s2']
+  case.UpdatePipeline()
+  
+  ## create a new 'Programmable Filter and change names'
+  print("--|| NEK: CHANGING VARNAMES 1 USING A PROGRAMMABLE FILTER")
+  startTime = time.time()
+  case = ProgrammableFilter(Input=case)
+  case.Script = \
+  """
+  import numpy as np
+  varNames0 = ['velocity','pressure','temperature','s1','s2']
+  varNames1 = ['AVVEL','AVPRE','TEMPR','AVTKE','AVOMG']
+  for (i,var) in enumerate(varNames0):
+   outName = varNames1[i]
+   avg = (inputs[0].PointData[var])
+   output.PointData.append(avg,outName)
+  """
+  case.UpdatePipeline()
+  print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
 
 elif('OFOAM' in codeName):
   print("--|| OFOAM :: READING OPENFOAM ARRAYS")
@@ -265,19 +290,34 @@ elif("SOD" in codeName):
     case.UpdatePipeline()
     print("--||SOD :: LOADED VARIABLES",case.PointData.keys())
     ## create a new 'Programmable Filter and change names'
-    print("--|| SOD: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+    print("--|| NEK: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
     startTime = time.time()
     case = ProgrammableFilter(Input=case)
     case.Script = \
     """
     import numpy as np
-    varNames0 = inputs[0].PointData.keys()
-    #---------------------------------#
+    varNames0 = ['pr','u','mu_fluid', 'mue', 'mut']
+    varNames1 = ['AVPRE','AVVEL','AVMUE','AVMEN','AVMUT']
     for (i,var) in enumerate(varNames0):
-     avg = inputs[0].PointData[var]
-     outName = var.upper()
+     outName = varNames1[i]
+     avg = (inputs[0].PointData[var])
      output.PointData.append(avg,outName)
     """
+    case.UpdatePipeline()
+    print("--|| NEK :: DONE. TIME =",time.time()-startTime,'sec')
+    #print("--|| SOD: CHANGING VARNAMES USING A PROGRAMMABLE FILTER")
+    #startTime = time.time()
+    #case = ProgrammableFilter(Input=case)
+    #case.Script = \
+    #"""
+    #import numpy as np
+    #varNames0 = inputs[0].PointData.keys()
+    ##---------------------------------#
+    #for (i,var) in enumerate(varNames0):
+    # avg = inputs[0].PointData[var]
+    # outName = var.upper()
+    # output.PointData.append(avg,outName)
+    #"""
   case.UpdatePipeline()
   print("--|| SOD :: DONE. TIME =",time.time()-startTime,'sec')
 elif("PVD" in codeName):
@@ -296,7 +336,24 @@ elif("VTM" in codeName):
   print("--|| VTM :: DONE. TIME =",time.time()-startTime,'sec')
 else:      
   raise ValueError('--|| ALYA ERROR :: CODENAME NOT RECONIZED.')
+  
 
+if("INS" in fileType):
+    case = Calculator(Input=case)
+    case.ResultArrayName = "AVVE2"
+    case.Function = "(AVVEL_X^2)*iHat+(AVVEL_Y^2)*jHat+(AVVEL_Z^2)*kHat"
+    case.UpdatePipeline()
+    case = Calculator(Input=case)
+    case.ResultArrayName = "AVVXY"
+    case.Function = "(AVVEL_X*AVVEL_Y)*iHat+(AVVEL_X*AVVEL_Z)*jHat+(AVVEL_Y*AVVEL_Z)*kHat"
+    case.UpdatePipeline()
+
+if('D3' in codeName):
+    print("--|| ALYA :: APPLYING D3 FILTER")
+    startTime = time.time()
+    case = D3(Input=case)
+    case.UpdatePipeline()
+    print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
 if('CLEAN' in codeName):
   print("--|| ALYA :: APPLYING CLEAN TO GRID FILTER")
   startTime = time.time()
@@ -421,7 +478,7 @@ if("CPCF" in fileType):
   case_clcd.ResultArrayName = "AVGCP"
   case_clcd.Function = "2.0*AVPRE"
   case_clcd.UpdatePipeline()
-  savePath = casePath+"/NekBndData_1D.csv"
+  savePath = casePath+"/NekBndData_2D.csv"
   #SaveData(savePath, proxy=case_clcd)
   SaveData(savePath, proxy=case_clcd,ChooseArraysToWrite=1,
                      PointDataArrays=['AVGCF', 'AVGCP'],
@@ -445,10 +502,13 @@ if('3D' in avgDim):
  # Save a 3D time averaged file
  #savePath = casePath+"/AvgData_3D.pvd"
  #savePath = casePath+"/AvgData_2D.vtm"
- if('AVG' in fileType):
-   savePath = casePath+"/AvgData_3D.csv"
- elif('INS' in fileType):
-   savePath = casePath+"/InsData_3D.csv"
+ if('NRANS' in codeName):
+   savePath = casePath+"/AvgData_NRANS.vtm"
+ else:
+   if('AVG' in fileType):
+     savePath = casePath+"/AvgData_3D.csv"
+   elif('INS' in fileType):
+     savePath = casePath+"/InsData_3D.csv"
  SaveData(savePath, proxy=case)
  #SaveData(savePath, proxy=case, FieldAssociation='Cell Data')
  print("----|| NEK: 3D STATISTICS FILE WRITTEN ")
@@ -529,6 +589,12 @@ if('2D' in avgDim or '1D' in avgDim):
       print("----|| ALYA: DELTA-Z = %f" % (delta_z))
       print("--|| ALYA :: DONE. TIME =",time.time()-startTime,'sec')
   
+  
+  if('SLICE' in fileType):
+    print("----|| NEK: WRITING SLICE OF 3D STATISTICS ")
+    savePath = casePath+"/AvgSliceData_2D.pvd"
+    SaveData(savePath, proxy=slice1)
+    print("----|| NEK: SLICE 3D STATISTICS FILE WRITTEN AS: ",savePath)
   ########### PERFORM AVERAGING ################
   print("--|| NEK :: CREATING TRANSFORMATIONS")
   startTime = time.time()
@@ -595,7 +661,7 @@ if('2D' in avgDim):
   #  PF1.CoordinateResults = 1
   #  PF1.Function = "coordsZ*iHat + sqrt(coordsX^2+coordsY^2)*jHat"
   #  PF1.UpdatePipeline()
-  if(codeName in str(["NEK","ALYA","SOD"])):
+  if(codeName in str(["NEK","ALYA","SOD","NRANS"])):
     savePath = casePath+"/AvgData_2D.vtm"
   #elif(codeName in str(["SOD"])):
   #  savePath = casePath+"/AvgData_2D.pvd"
@@ -619,8 +685,10 @@ if('2D' in avgDim):
   case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCF"
-  if('SOD' in codeName):
+  if('CURVE' in geomType):
     case_clcd.Function = "2.0*AVMUE*(mag((""AVVGR_0""*iHat+""AVVGR_1""*jHat)+(""AVVGR_3""*iHat+""AVVGR_4""*jHat)))"
+  else:  
+    case_clcd.Function = "2.0*AVMUE*(""AVVGR_1""+""AVVGR_3"")"
   case_clcd.UpdatePipeline()
   case_clcd = Calculator(Input=case_clcd)
   case_clcd.ResultArrayName = "AVGCP"
